@@ -1,0 +1,2 @@
+-- Optional seed template. Create the room and ten teams using README provisioning steps,
+-- then insert demo players with the actual room UUID. Do not use real participant passwords.

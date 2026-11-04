@@ -95,7 +95,30 @@ export default function Home() {
     if (result.error) setMessage(result.error.message);
     else if (signUp) setMessage("Account created. Verify your email if Supabase email confirmation is enabled, then sign in.");
   }
+  async function createRoom() {
+    if (!session) {
+      setMessage("Please sign in first.");
+      return;
+    }
+    setBusy(true); setMessage("");
+    try {
+      const { data, error } = await db.from("rooms").insert({
+        code: roomCode.trim().toUpperCase(),
+        password: adminPassword,
+        status: "live"
+      }).select("id").maybeSingle();
 
+      if (error) {
+        setMessage("Error creating room: " + error.message);
+      } else if (data) {
+        setMessage("Room created successfully! Now click '2. Join as Auctioneer' to enter.");
+      }
+    } catch (err: any) {
+      setMessage(err.message || "An error occurred while creating room.");
+    }
+    setBusy(false);
+  }
+  
     async function joinRoom() {
     if (!session) {
       setMessage("Please sign in first.");
@@ -177,16 +200,15 @@ export default function Home() {
     const csv = rows.map(r => r.map(v => `"${String(v ?? "").replaceAll('"', '""')}"`).join(",")).join("\n");
     const a = document.createElement("a"); a.href = URL.createObjectURL(new Blob([csv], { type: "text/csv" })); a.download = "WCL-auction-results.csv"; a.click(); URL.revokeObjectURL(a.href);
   }
-    if (!session) return <main className="wrap">
+     if (!session) return <main className="wrap">
     <header><div><div className="brand">WCL <b>AUCTION ROOM</b></div><div className="muted">SEASON 1 · PRIVATE MULTIPLAYER AUCTION</div></div><span className="pill">SETUP REQUIRED</span></header>
     <section className="card login">
-      <h1>Enter the auction room</h1><p className="muted">Create an account or sign in. Your room membership and role are checked by the database.</p>
+      <h1>Enter the auction room</h1><p className="muted">Create an account or sign in first. Then build or enter your room credentials.</p>
       <label>Email</label><input value={email} onChange={e => setEmail(e.target.value)} type="email" placeholder="you@example.com"/>
       <label>Password</label><input value={password} onChange={e => setPassword(e.target.value)} type="password" placeholder="Account password"/>
       <div className="actions"><button disabled={busy} onClick={() => auth(false)}>Sign in</button><button className="alt" disabled={busy} onClick={() => auth(true)}>Create account</button></div>
       <hr/>
-            <h3>Join private WCL room</h3>
-      <label>Room code</label><input value={roomCode} onChange={e => setRoomCode(e.target.value)} placeholder="WCLS1"/>
+      <h3>Enter Room Details</h3><label>Room code</label><input value={roomCode} onChange={e => setRoomCode(e.target.value)} placeholder="WCLS1"/>
       <label>Team Type / Role</label>
       <select value={teamId} onChange={e => setTeamId(e.target.value)}>
         <option value="">Auctioneer (Owner)</option>
@@ -195,8 +217,12 @@ export default function Home() {
 
       {teamId === "" ? (
         <>
-          <label>Admin Password (For Auctioneer)</label>
-          <input value={adminPassword} onChange={e => setAdminPassword(e.target.value)} type="password" placeholder="Enter Admin Secret Password"/>
+          <label>Admin/Room Password</label>
+          <input value={adminPassword} onChange={e => setAdminPassword(e.target.value)} type="password" placeholder="Enter Room Admin Password"/>
+          <div className="actions" style={{gap: '10px', marginTop: '15px'}}>
+            <button disabled={busy} onClick={createRoom} style={{backgroundColor: '#22c55e', color: 'white'}}>1. Create New Room</button>
+            <button disabled={busy} onClick={joinRoom}>2. Join as Auctioneer</button>
+          </div>
         </>
       ) : (
         <>
@@ -204,19 +230,17 @@ export default function Home() {
           <input value={roomPassword} onChange={e => setRoomPassword(e.target.value)} type="password" placeholder="Enter Room Password"/>
           <label>Team PIN</label>
           <input value={teamPin} onChange={e => setTeamPin(e.target.value)} type="password" placeholder="Provided by auction organiser"/>
+          <button disabled={busy} onClick={joinRoom} style={{marginTop: '15px'}}>Join Team Room</button>
         </>
       )}
-      
-      <button disabled={busy} onClick={joinRoom}>Join room</button>
-      <p className="muted">Sign in first, then enter your private room credentials.</p>
-      {message && <p className="notice">{message}</p>}
+      {message && <p className="notice" style={{marginTop: '15px'}}>{message}</p>}
     </section>
   </main>;
 
   if (!room || !profile) return <main className="wrap">
     <header><div className="brand">WCL <b>AUCTION ROOM</b></div><button className="alt" onClick={() => db.auth.signOut()}>Sign out</button></header>
     <section className="card">
-      <h2>You're signed in</h2><p className="muted">Join your private room using credentials.</p>
+      <h2>You're signed in</h2><p className="muted">Create or Join your room.</p>
       <label>Room code</label><input value={roomCode} onChange={e => setRoomCode(e.target.value)} placeholder="WCLS1" />
       <label>Team</label>
       <select value={teamId} onChange={e => setTeamId(e.target.value)}>
@@ -226,8 +250,12 @@ export default function Home() {
 
       {teamId === "" ? (
         <>
-          <label>Admin Password</label>
-          <input value={adminPassword} onChange={e => setAdminPassword(e.target.value)} type="password" placeholder="Enter Admin Secret Password"/>
+          <label>Admin/Room Password</label>
+          <input value={adminPassword} onChange={e => setAdminPassword(e.target.value)} type="password" placeholder="Enter Room Admin Password"/>
+          <div className="actions" style={{gap: '10px', marginTop: '15px'}}>
+            <button disabled={busy} onClick={createRoom} style={{backgroundColor: '#22c55e', color: 'white'}}>1. Create New Room</button>
+            <button disabled={busy} onClick={joinRoom}>2. Join as Auctioneer</button>
+          </div>
         </>
       ) : (
         <>
@@ -235,15 +263,13 @@ export default function Home() {
           <input type="password" value={roomPassword} onChange={e => setRoomPassword(e.target.value)} placeholder="Enter Room Password"/>
           <label>Team PIN</label>
           <input type="password" value={teamPin} onChange={e => setTeamPin(e.target.value)} placeholder="Enter Team PIN"/>
+          <button disabled={busy} onClick={joinRoom} style={{marginTop: '15px'}}>Join Team Room</button>
         </>
       )}
-
-      <button disabled={busy} onClick={joinRoom}>Join room</button>
-      {message && <p className="notice">{message}</p>}
+      {message && <p className="notice" style={{marginTop: '15px'}}>{message}</p>}
     </section>
   </main>;
-  
-    return <main className="wrap">
+      return <main className="wrap">
     <header><div><div className="brand">WCL <b>AUCTION ROOM</b></div><div className="muted">SEASON 1 · 10 TEAMS · ₹150 CR PURSE</div></div><div className="headerRight"><span className="pill">{room.status.toUpperCase()}</span><span className="connected">● LIVE CONNECTION</span><button className="alt" onClick={() => db.auth.signOut()}>Sign out</button></div></header>
     {message && <div className="notice">{message}</div>}
     {room.warning_stage > 0 && <div className="warning">{room.warning_stage === 1 ? "⚠ WARNING" : room.warning_stage === 2 ? "⚠ FINAL WARNING" : "BIDDING CLOSED — AWAITING AUCTIONEER"}</div>}
@@ -269,4 +295,3 @@ export default function Home() {
     <footer>WCL AUCTION ROOM · Virtual credits only · Connection state is shown above</footer>
   </main>;
 }
-

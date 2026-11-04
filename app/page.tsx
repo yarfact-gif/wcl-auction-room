@@ -31,32 +31,38 @@ export default function Home() {
   const [message, setMessage] = useState("");
   const [busy, setBusy] = useState(false);
   const [newPlayer, setNewPlayer] = useState({ name: "", country: "India", role: "Batter", batting: "", bowling: "", base: "2" });
-    const refresh = useCallback(async () => {
+      const refresh = useCallback(async () => {
     const { data: auth } = await db.auth.getSession();
-    setSession(auth.session);
     if (!auth.session) return;
+    
     const { data: prof } = await db.from("profiles").select("role,team_id,display_name").eq("id", auth.session.user.id).maybeSingle();
     if (prof) setProfile(prof);
+    
     const { data: membership } = await db.from("room_members").select("room_id").eq("user_id", auth.session.user.id).maybeSingle();
     if (!membership) return;
+    
     const { data: r } = await db.from("rooms").select("*").eq("id", membership.room_id).single();
     if (!r) return;
     setRoom(r);
+    
     const [{ data: ts }, { data: ps }, { data: bids }] = await Promise.all([
       db.from("team_public_state").select("*").eq("room_id", r.id).order("name"),
       db.from("players").select("*").eq("room_id", r.id).order("queue_position"),
       db.from("bids").select("id,amount,created_at,teams(name),players(name)").eq("room_id", r.id).order("created_at", { ascending: false }).limit(30)
     ]);
+    
     setTeams((ts || []) as Team[]);
     setPlayers((ps || []) as Player[]);
     setHistory(bids || []);
+    
     const cp = (ps || []).find((p: any) => p.id === r.current_player_id) || null;
     setCurrentPlayer(cp);
+    
     const amount = Number(r.current_bid || 0);
     const base = Number(cp?.base_price || 2);
     setNextBid(Number((amount ? amount + (amount < 5 ? 0.2 : 0.5) : base).toFixed(1)));
   }, [db]);
-
+  
   useEffect(() => {
     db.auth.getSession().then(({ data }) => setSession(data.session));
     const { data: authListener } = db.auth.onAuthStateChange((_event, s) => setSession(s));

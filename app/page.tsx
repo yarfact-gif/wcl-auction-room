@@ -220,7 +220,7 @@ p_auction_category: newPlayer.category
     });
     setBusy(false);
     if (error) setMessage(error.message);
-    else { setNewPlayer({ name: "", country: "India", role: "Batter", batting: "", bowling: "", base: "0.20" }); setCustomBase(""); setMessage("Player added."); refresh(); }
+    else { setNewPlayer({ name: "", country: "India", role: "Batter", category: "Marquee", batting: "", bowling: "", base: "0.20" }); setCustomBase(""); setMessage("Player added."); refresh(); }
   }
 
   async function openSquad() {

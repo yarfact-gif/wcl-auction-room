@@ -9,6 +9,11 @@ type RoomState = { id: string; status: string; current_player_id: string | null;
 type Profile = { role: string; team_id: string | null; display_name: string | null };
 
 const money = (n: number) => `₹${Number(n || 0).toFixed(1)} Cr`;
+const TEAM_NAMES = [
+  "Trinbago Knight Riders", "Chennai Super Kings", "Mumbai Indians",
+  "Kolkata Knight Riders", "Royal Challengers Bengaluru", "Rajasthan Royals",
+  "Sunrisers Hyderabad", "Delhi Capitals", "Punjab Kings", "Gujarat Titans"
+];
 
 export default function Home() {
   const db = useMemo(() => supabaseBrowser(), []);
@@ -30,6 +35,7 @@ export default function Home() {
   const [clock, setClock] = useState(Date.now());
   const [message, setMessage] = useState("");
   const [busy, setBusy] = useState(false);
+  const [generatedCredentials, setGeneratedCredentials] = useState<{ roomCode: string; teams: { name: string; pin: string }[] } | null>(null);
   const [newPlayer, setNewPlayer] = useState({ name: "", country: "India", role: "Batter", batting: "", bowling: "", base: "2" });
       const refresh = useCallback(async () => {
     const { data: auth } = await db.auth.getSession();
@@ -41,6 +47,9 @@ export default function Home() {
     const { data: membership } = await db.from("room_members").select("room_id").eq("user_id", auth.session.user.id).maybeSingle();
     if (!membership) return;
     
+    const { data: r } = await db.from("rooms").select("*").eq("id", membership.room_id).single();
+    if (!r) return;
+    setRoom(r);
     const { data: r } = await db.from("rooms").select("*").eq("id", membership.room_id).single();
     if (!r) return;
     setRoom(r);
@@ -81,7 +90,6 @@ export default function Home() {
       .subscribe();
     return () => { db.removeChannel(channel); };
   }, [db, room?.id, refresh]);
-  
 
   useEffect(() => {
     const id = setInterval(() => setClock(Date.now()), 100);
@@ -101,72 +109,55 @@ export default function Home() {
     if (result.error) setMessage(result.error.message);
     else if (signUp) setMessage("Account created. Verify your email if Supabase email confirmation is enabled, then sign in.");
   }
-  async function createRoom() {
-    if (!session) {
-      setMessage("Please sign in first.");
-      return;
+  function generateUniquePins(count: number) {
+    const pins = new Set<string>();
+    const values = new Uint32Array(1);
+    while (pins.size < count) {
+      crypto.getRandomValues(values);
+      pins.add(String(values[0] % 10000).padStart(4, "0"));
     }
-    setBusy(true); setMessage("");
-    try {
-      const { data, error } = await db.from("rooms").insert({
-        code: roomCode.trim().toUpperCase(),
-        password: adminPassword,
-        status: "live"
-      }).select("id").maybeSingle();
-
-      if (error) {
-        setMessage("Error creating room: " + error.message);
-      } else if (data) {
-        setMessage("Room created successfully! Now click '2. Join as Auctioneer' to enter.");
-      }
-    } catch (err: any) {
-      setMessage(err.message || "An error occurred while creating room.");
-    }
-    setBusy(false);
+    return Array.from(pins);
   }
-  
-    async function joinRoom() {
-    if (!session) {
-      setMessage("Please sign in first.");
-      return;
-    }
+
+  async function createRoom() {
+    if (!session) { setMessage("Please sign in first."); return; }
+    if (!roomCode.trim() || !adminPassword) { setMessage("Enter a room code and admin password first."); return; }
+    setBusy(true); setMessage(""); setGeneratedCredentials(null);
+    try {
+      const pins = generateUniquePins(TEAM_NAMES.length);
+      const { data, error } = await db.rpc("create_private_room", {
+        p_room_code: roomCode.trim().toUpperCase(),
+        p_admin_password: adminPassword,
+        p_team_names: TEAM_NAMES,
+        p_team_pins: pins
+      });
+      if (error) throw error;
+      setGeneratedCredentials({ roomCode: roomCode.trim().toUpperCase(), teams: TEAM_NAMES.map((name, i) => ({ name, pin: pins[i] })) });
+      setMessage("Room created! Save these team PINs now. They will not be shown again.");
+    } catch (err: any) {
+      setMessage("Error creating room: " + (err.message || "Unknown error"));
+    } finally { setBusy(false); }
+  }
+async function joinRoom() {
+    if (!session) { setMessage("Please sign in first."); return; }
+    const suppliedRoomPassword = teamId === "" ? adminPassword : roomPassword;
+    if (!roomCode.trim() || !suppliedRoomPassword) { setMessage("Enter the room code and room password."); return; }
+    if (teamId !== "" && !/^\d{4}$/.test(teamPin)) { setMessage("Team PIN must be exactly 4 digits."); return; }
     setBusy(true); setMessage("");
     try {
-      const { data: targetRoom, error: roomErr } = await db.from("rooms").select("id, password").eq("code", roomCode.trim().toUpperCase()).maybeSingle();
-      
-      if (roomErr || !targetRoom) {
-        setMessage("Invalid Room code.");
-        setBusy(false);
-        return;
-      }
-
-      if (teamId === "") {
-        if (adminPassword !== targetRoom.password) {
-          setMessage("Incorrect Admin Password! You cannot become Auctioneer.");
-          setBusy(false);
-          return;
-        }
-        await db.from("room_members").upsert({ room_id: targetRoom.id, user_id: session.user.id });
-        await db.from("profiles").update({ role: "auctioneer", team_id: null }).eq("id", session.user.id);
-      } else {
-        const { data: validTeam, error: teamErr } = await db.from("teams").select("id").eq("room_id", targetRoom.id).eq("name", teamId).eq("pin", teamPin).maybeSingle();
-        if (teamErr || !validTeam) {
-          setMessage("Invalid Team PIN for the selected team.");
-          setBusy(false);
-          return;
-        }
-        await db.from("room_members").upsert({ room_id: targetRoom.id, user_id: session.user.id });
-        await db.from("profiles").update({ role: "team", team_id: validTeam.id }).eq("id", session.user.id);
-      }
-
+      const { error } = await db.rpc("join_private_room", {
+        p_room_code: roomCode.trim().toUpperCase(),
+        p_room_password: suppliedRoomPassword,
+        p_team_name: teamId || null,
+        p_team_pin: teamId ? teamPin : null
+      });
+      if (error) throw error;
       setMessage("Joined room successfully!");
       await refresh();
     } catch (err: any) {
       setMessage(err.message || "An error occurred while joining.");
-    }
-    setBusy(false);
-    }
-  
+    } finally { setBusy(false); }
+  }
 
   async function act(fn: string, args: Record<string, any> = {}) {
     setBusy(true); setMessage("");
@@ -196,8 +187,7 @@ export default function Home() {
     setBusy(false);
     if (error) setMessage(error.message);
     else { setNewPlayer({ name: "", country: "India", role: "Batter", batting: "", bowling: "", base: "2" }); setMessage("Player added."); refresh(); }
-  }
-
+      }
   async function exportCsv() {
     if (!room) return;
     const { data, error } = await db.from("squads").select("teams(name),players(name,role,country),price").eq("room_id", room.id);
@@ -218,7 +208,7 @@ export default function Home() {
       <label>Team Type / Role</label>
       <select value={teamId} onChange={e => setTeamId(e.target.value)}>
         <option value="">Auctioneer (Owner)</option>
-        {["Trinbago Knight Riders","Chennai Super Kings","Mumbai Indians","Kolkata Knight Riders","Royal Challengers Bengaluru","Rajasthan Royals","Sunrisers Hyderabad","Delhi Capitals","Punjab Kings","Gujarat Titans"].map(n => <option key={n} value={n}>{n}</option>)}
+        {TEAM_NAMES.map(n => <option key={n} value={n}>{n}</option>)}
       </select>
 
       {teamId === "" ? (
@@ -231,30 +221,6 @@ export default function Home() {
           </div>
         </>
       ) : (
-        <>
-          <label>Room password</label>
-          <input value={roomPassword} onChange={e => setRoomPassword(e.target.value)} type="password" placeholder="Enter Room Password"/>
-          <label>Team PIN</label>
-          <input value={teamPin} onChange={e => setTeamPin(e.target.value)} type="password" placeholder="Provided by auction organiser"/>
-          <button disabled={busy} onClick={joinRoom} style={{marginTop: '15px'}}>Join Team Room</button>
-        </>
-      )}
-      {message && <p className="notice" style={{marginTop: '15px'}}>{message}</p>}
-    </section>
-  </main>;
-
-  if (!room || !profile) return <main className="wrap">
-    <header><div className="brand">WCL <b>AUCTION ROOM</b></div><button className="alt" onClick={() => db.auth.signOut()}>Sign out</button></header>
-    <section className="card">
-      <h2>You're signed in</h2><p className="muted">Create or Join your room.</p>
-      <label>Room code</label><input value={roomCode} onChange={e => setRoomCode(e.target.value)} placeholder="WCLS1" />
-      <label>Team</label>
-      <select value={teamId} onChange={e => setTeamId(e.target.value)}>
-        <option value="">Auctioneer (Owner)</option>
-        {["Trinbago Knight Riders","Chennai Super Kings","Mumbai Indians","Kolkata Knight Riders","Royal Challengers Bengaluru","Rajasthan Royals","Sunrisers Hyderabad","Delhi Capitals","Punjab Kings","Gujarat Titans"].map(n => <option key={n} value={n}>{n}</option>)}
-      </select>
-
-      {teamId === "" ? (
         <>
           <label>Admin/Room Password</label>
           <input value={adminPassword} onChange={e => setAdminPassword(e.target.value)} type="password" placeholder="Enter Room Admin Password"/>
@@ -268,11 +234,17 @@ export default function Home() {
           <label>Room password</label>
           <input type="password" value={roomPassword} onChange={e => setRoomPassword(e.target.value)} placeholder="Enter Room Password"/>
           <label>Team PIN</label>
-          <input type="password" value={teamPin} onChange={e => setTeamPin(e.target.value)} placeholder="Enter Team PIN"/>
+          <input type="password" value={teamPin} onChange={e => setTeamPin(e.target.value.replace(/\D/g, "").slice(0, 4))} inputMode="numeric" maxLength={4} placeholder="Enter 4-digit Team PIN"/>
           <button disabled={busy} onClick={joinRoom} style={{marginTop: '15px'}}>Join Team Room</button>
         </>
       )}
       {message && <p className="notice" style={{marginTop: '15px'}}>{message}</p>}
+      {generatedCredentials && <div className="notice" style={{marginTop: '15px'}}>
+        <h3>Save your team PINs now</h3>
+        <p>Room code: <b>{generatedCredentials.roomCode}</b></p>
+        {generatedCredentials.teams.map(t => <p key={t.name}>{t.name}: <b>{t.pin}</b></p>)}
+        <button type="button" className="alt" onClick={() => navigator.clipboard?.writeText(`Room: ${generatedCredentials.roomCode}\n` + generatedCredentials.teams.map(t => `${t.name}: ${t.pin}`).join("\n"))}>Copy all PINs</button>
+      </div>}
     </section>
   </main>;
       return <main className="wrap">
@@ -293,7 +265,7 @@ export default function Home() {
         {myTeam ? <><div className="stats"><div className="stat"><div className="muted">PURSE REMAINING</div><b className="big">{money(myTeam.purse_remaining)}</b></div><div className="stat"><div className="muted">SQUAD SIZE</div><b className="big">{myTeam.squad_count}/18</b></div><div className="stat"><div className="muted">OVERSEAS</div><b>{myTeam.overseas_count}/8</b></div><div className="stat"><div className="muted">SPENT</div><b>{money(150 - myTeam.purse_remaining)}</b></div></div></> : <p className="muted">Auctioneer view · all teams visible below.</p>}
         <p className="muted">Squad minimum: 15 · maximum: 18 · overseas maximum: 8 · Playing XI overseas maximum: 4.</p>
       </section>
-    </div>
+       </div>
     {isAdmin && <section className="card"><h3>Player queue management</h3><div className="formGrid"><input placeholder="Player name" value={newPlayer.name} onChange={e => setNewPlayer({...newPlayer,name:e.target.value})}/><input placeholder="Country" value={newPlayer.country} onChange={e => setNewPlayer({...newPlayer,country:e.target.value})}/><select value={newPlayer.role} onChange={e => setNewPlayer({...newPlayer,role:e.target.value})}>{["Batter","Bowler","All-rounder","Wicketkeeper"].map(x=><option key={x}>{x}</option>)}</select><select value={newPlayer.country === "India" ? "Indian" : "Overseas"} onChange={e => setNewPlayer({...newPlayer,country:e.target.value === "Indian" ? "India" : "Overseas"})}><option>Indian</option><option>Overseas</option></select><input placeholder="Batting style" value={newPlayer.batting} onChange={e => setNewPlayer({...newPlayer,batting:e.target.value})}/><input placeholder="Bowling style" value={newPlayer.bowling} onChange={e => setNewPlayer({...newPlayer,bowling:e.target.value})}/><input type="number" min="2" step=".2" value={newPlayer.base} onChange={e => setNewPlayer({...newPlayer,base:e.target.value})}/><button disabled={busy || !newPlayer.name.trim()} onClick={addPlayer}>Add player</button></div><p className="muted">Full edit/reorder/import tools are listed in the setup roadmap; database permissions already restrict player mutations to the auctioneer.</p></section>}
     <section className="card"><h3>Teams & purse tracker</h3><div className="teams">{teams.map(t=><div className={`team ${t.id===profile.team_id?"active":""}`} key={t.id}><b>{t.name}</b><div className="teamMoney">{money(t.purse_remaining)}</div><div className="muted">{t.squad_count} players · {t.overseas_count} overseas</div></div>)}</div></section>
     <div className="grid"><section className="card"><h3>Player queue</h3><div className="tableWrap"><table><thead><tr><th>Player</th><th>Country</th><th>Role</th><th>Base</th><th>Status</th></tr></thead><tbody>{players.map(p=><tr key={p.id} className={p.id===room.current_player_id?"selected":""}><td>{p.name}</td><td>{p.country}</td><td>{p.role}</td><td>{money(p.base_price)}</td><td>{p.status}</td></tr>)}</tbody></table></div></section>

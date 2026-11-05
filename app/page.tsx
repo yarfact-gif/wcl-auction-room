@@ -14,7 +14,7 @@ type SquadEntry = {
   players?: { name: string; role: string; country: string }[] | { name: string; role: string; country: string } | null;
 };
 
-const money = (n: number) => `₹${Number(n || 0).toFixed(1)} Cr`;
+const money = (n: number) => `₹${Number(n || 0).toFixed(2)} Cr`;
 const TEAM_NAMES = [
   "Trinbago Knight Riders", "Chennai Super Kings", "Mumbai Indians",
   "Kolkata Knight Riders", "Royal Challengers Bengaluru", "Rajasthan Royals",

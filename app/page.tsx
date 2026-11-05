@@ -370,7 +370,34 @@ p_auction_category: newPlayer.category
         <p className="muted">Squad minimum: 15 · maximum: 18 · overseas maximum: 8 · Playing XI overseas maximum: 4.</p>
       </section>
     </div>
-    {isAdmin && <section className="card"><h3>Player queue management</h3><div className="formGrid"><input placeholder="Player name" value={newPlayer.name} onChange={e => setNewPlayer({...newPlayer,name:e.target.value})}/><input placeholder="Country" value={newPlayer.country} onChange={e => setNewPlayer({...newPlayer,country:e.target.value})}/><select value={newPlayer.role} onChange={e => setNewPlayer({...newPlayer,role:e.target.value})}><select
+    {isAdmin && <section className="card"><h3>Player queue management</h3><div className="formGrid"><input placeholder="Player name" value={newPlayer.name} onChange={e => setNewPlayer({...newPlayer,name:e.target.value})}/><input placeholder="Country" value={newPlayer.country} onChange={e => setNewPlayer({...newPlayer,country:e.target.value})}/><select
+  value={newPlayer.role}
+  onChange={e => setNewPlayer({...newPlayer, role:e.target.value})}
+>
+  <option value="Batter">Batter</option>
+  <option value="Bowler">Bowler</option>
+  <option value="All-rounder">All-rounder</option>
+  <option value="Wicketkeeper">Wicketkeeper</option>
+</select>
+
+<select
+  value={newPlayer.category}
+  onChange={e => setNewPlayer({...newPlayer, category:e.target.value})}
+>
+  {[
+    "Marquee",
+    "Batsman",
+    "All-rounder",
+    "Wicketkeeper",
+    "Fast Bowler",
+    "Spinner",
+    "Uncapped Batsman",
+    "Uncapped All-rounder",
+    "Uncapped Wicketkeeper",
+    "Uncapped Fast Bowler",
+    "Uncapped Spinner"
+  ].map(x => <option key={x} value={x}>{x}</option>)}
+</select>
   value={newPlayer.category}
   onChange={e => setNewPlayer({...newPlayer, category:e.target.value})}
 >

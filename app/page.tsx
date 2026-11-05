@@ -206,7 +206,7 @@ setNextBid(Number((amount > 0 ? amount + increment : base).toFixed(2)));
     const { error } = await db.rpc("admin_add_player", {
       p_room_id: room.id, p_name: newPlayer.name, p_country: newPlayer.country,
       p_role: newPlayer.role, p_batting_style: newPlayer.batting,
-      p_bowling_style: newPlayer.bowling, p_base_price: Number(newPlayer.base === "custom" ? customBase : newPlayer.base)
+      p_bowling_style: newPlayer.bowling, p_base_price: selectedBase
     });
     setBusy(false);
     if (error) setMessage(error.message);

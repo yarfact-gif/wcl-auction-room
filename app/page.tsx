@@ -345,7 +345,24 @@ setNextBid(Number((amount > 0 ? amount + increment : base).toFixed(2)));
         <p className="muted">Squad minimum: 15 · maximum: 18 · overseas maximum: 8 · Playing XI overseas maximum: 4.</p>
       </section>
     </div>
-    {isAdmin && <section className="card"><h3>Player queue management</h3><div className="formGrid"><input placeholder="Player name" value={newPlayer.name} onChange={e => setNewPlayer({...newPlayer,name:e.target.value})}/><input placeholder="Country" value={newPlayer.country} onChange={e => setNewPlayer({...newPlayer,country:e.target.value})}/><select value={newPlayer.role} onChange={e => setNewPlayer({...newPlayer,role:e.target.value})}>{["Batter","Bowler","All-rounder","Wicketkeeper"].map(x=><option key={x}>{x}</option>)}</select><select value={newPlayer.country === "India" ? "Indian" : "Overseas"} onChange={e => setNewPlayer({...newPlayer,country:e.target.value === "Indian" ? "India" : "Overseas"})}><option>Indian</option><option>Overseas</option></select><input placeholder="Batting style" value={newPlayer.batting} onChange={e => setNewPlayer({...newPlayer,batting:e.target.value})}/><input placeholder="Bowling style" value={newPlayer.bowling} onChange={e => setNewPlayer({...newPlayer,bowling:e.target.value})}/><select
+    {isAdmin && <section className="card"><h3>Player queue management</h3><div className="formGrid"><input placeholder="Player name" value={newPlayer.name} onChange={e => setNewPlayer({...newPlayer,name:e.target.value})}/><input placeholder="Country" value={newPlayer.country} onChange={e => setNewPlayer({...newPlayer,country:e.target.value})}/><select value={newPlayer.role} onChange={e => setNewPlayer({...newPlayer,role:e.target.value})}><select
+  value={newPlayer.category}
+  onChange={e => setNewPlayer({...newPlayer, category:e.target.value})}
+>
+  {[
+    "Marquee",
+    "Batsman",
+    "All-rounder",
+    "Wicketkeeper",
+    "Fast Bowler",
+    "Spinner",
+    "Uncapped Batsman",
+    "Uncapped All-rounder",
+    "Uncapped Wicketkeeper",
+    "Uncapped Fast Bowler",
+    "Uncapped Spinner"
+  ].map(x => <option key={x} value={x}>{x}</option>)}
+</select><select value={newPlayer.country === "India" ? "Indian" : "Overseas"} onChange={e => setNewPlayer({...newPlayer,country:e.target.value === "Indian" ? "India" : "Overseas"})}><option>Indian</option><option>Overseas</option></select><input placeholder="Batting style" value={newPlayer.batting} onChange={e => setNewPlayer({...newPlayer,batting:e.target.value})}/><input placeholder="Bowling style" value={newPlayer.bowling} onChange={e => setNewPlayer({...newPlayer,bowling:e.target.value})}/><select
   value={newPlayer.base}
   onChange={e => setNewPlayer({...newPlayer, base:e.target.value})}
 >

@@ -381,23 +381,7 @@ p_auction_category: newPlayer.category
 </select>
 
 <select
-  value={newPlayer.category}
-  onChange={e => setNewPlayer({...newPlayer, category:e.target.value})}
->
-  {[
-    "Marquee",
-    "Batsman",
-    "All-rounder",
-    "Wicketkeeper",
-    "Fast Bowler",
-    "Spinner",
-    "Uncapped Batsman",
-    "Uncapped All-rounder",
-    "Uncapped Wicketkeeper",
-    "Uncapped Fast Bowler",
-    "Uncapped Spinner"
-  ].map(x => <option key={x} value={x}>{x}</option>)}
-</select>
+  
   value={newPlayer.category}
   onChange={e => setNewPlayer({...newPlayer, category:e.target.value})}
 >

@@ -194,7 +194,14 @@ setNextBid(Number((amount > 0 ? amount + increment : base).toFixed(2)));
   }
 
   async function addPlayer() {
-    if (!room) return;
+    if (!room) return;    const selectedBase = newPlayer.base === "custom"
+      ? Number(customBase)
+      : Number(newPlayer.base);
+
+    if (!Number.isFinite(selectedBase) || selectedBase < 0.20) {
+      setMessage("Base price must be at least ₹20 Lakh (0.20 Cr).");
+      return;
+    }
     setBusy(true);
     const { error } = await db.rpc("admin_add_player", {
       p_room_id: room.id, p_name: newPlayer.name, p_country: newPlayer.country,

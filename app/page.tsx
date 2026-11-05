@@ -4,7 +4,9 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import { supabaseBrowser } from "@/lib/supabase";
 
 type Team = { id: string; name: string; purse_remaining: number; squad_count: number; overseas_count: number };
-type Player = { id: string; name: string; country: string; player_type: string; role: string; batting_style: string; bowling_style: string; base_price: number; status: string; image_url?: string | null };
+type Player = { id: string; name: string; country: string; player_type: string; role: string; batting_style: string; bowling_style: string; base_price: number; status: string; image_url?: string | null;
+  auction_category?: string | null;
+}; 
 type RoomState = { id: string; status: string; current_player_id: string | null; current_bid: number; leading_team_id: string | null; warning_stage: number; countdown_ends_at: string | null };
 type Profile = { role: string; team_id: string | null; display_name: string | null };
 type SquadEntry = {

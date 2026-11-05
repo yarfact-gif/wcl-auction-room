@@ -203,7 +203,7 @@ setNextBid(Number((amount > 0 ? amount + increment : base).toFixed(2)));
     });
     setBusy(false);
     if (error) setMessage(error.message);
-    else { setNewPlayer({ name: "", country: "India", role: "Batter", batting: "", bowling: "", base: "2" }); setMessage("Player added."); refresh(); }
+    else { setNewPlayer({ name: "", country: "India", role: "Batter", batting: "", bowling: "", base: "0.20" }); setCustomBase(""); setMessage("Player added."); refresh(); }
   }
 
   async function openSquad() {

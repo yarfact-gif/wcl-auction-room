@@ -7,7 +7,7 @@ type Team = { id: string; name: string; purse_remaining: number; squad_count: nu
 type Player = { id: string; name: string; country: string; player_type: string; role: string; batting_style: string; bowling_style: string; base_price: number; status: string; image_url?: string | null };
 type RoomState = { id: string; status: string; current_player_id: string | null; current_bid: number; leading_team_id: string | null; warning_stage: number; countdown_ends_at: string | null };
 type Profile = { role: string; team_id: string | null; display_name: string | null };
-type SquadEntry = { id: number; price: number; teams?: { name: string } | null; players?: { name: string; role: string; country: string } | null };
+type SquadEntry = { id: number; price: number; teams?: { name: string }[] | null; players?: { name: string; role: string; country: string }[] | null };
 
 const money = (n: number) => `₹${Number(n || 0).toFixed(1)} Cr`;
 const TEAM_NAMES = [
@@ -54,7 +54,6 @@ export default function Home() {
     const { data: r } = await db.from("rooms").select("*").eq("id", membership.room_id).single();
     if (!r) return;
     setRoom(r);
-    
     
     const [{ data: ts }, { data: ps }, { data: bids }] = await Promise.all([
       db.from("team_public_state").select("*").eq("room_id", r.id).order("name"),
@@ -111,7 +110,7 @@ export default function Home() {
     setBusy(false);
     if (result.error) setMessage(result.error.message);
     else if (signUp) setMessage("Account created. Verify your email if Supabase email confirmation is enabled, then sign in.");
-    }
+  }
   function generateUniquePins(count: number) {
     const pins = new Set<string>();
     const values = new Uint32Array(1);
@@ -178,8 +177,7 @@ export default function Home() {
     setBusy(false);
     if (error) setMessage(error.message);
     else { setMessage("Bid accepted."); await refresh(); }
-                                   }
-    
+  }
 
   async function addPlayer() {
     if (!room) return;
@@ -251,6 +249,39 @@ export default function Home() {
       ) : (
         <>
           <label>Room password</label>
+          <input value={roomPassword} onChange={e => setRoomPassword(e.target.value)} type="password" placeholder="Enter Room Password"/>
+          <label>Team PIN</label>
+          <input value={teamPin} onChange={e => setTeamPin(e.target.value.replace(/\D/g, "").slice(0, 4))} type="password" inputMode="numeric" maxLength={4} placeholder="4-digit team PIN"/>
+          <button disabled={busy} onClick={joinRoom} style={{marginTop: '15px'}}>Join Team Room</button>
+        </>
+      )}
+      {message && <p className="notice" style={{marginTop: '15px'}}>{message}</p>}
+    </section>
+  </main>;
+
+  if (!room || !profile) return <main className="wrap">
+    <header><div className="brand">WCL <b>AUCTION ROOM</b></div><button className="alt" onClick={() => db.auth.signOut()}>Sign out</button></header>
+    <section className="card">
+      <h2>You're signed in</h2><p className="muted">Create or Join your room.</p>
+      <label>Room code</label><input value={roomCode} onChange={e => setRoomCode(e.target.value)} placeholder="WCLS1" />
+      <label>Team</label>
+      <select value={teamId} onChange={e => setTeamId(e.target.value)}>
+        <option value="">Auctioneer (Owner)</option>
+        {TEAM_NAMES.map(n => <option key={n} value={n}>{n}</option>)}
+      </select>
+
+      {teamId === "" ? (
+        <>
+          <label>Admin/Room Password</label>
+          <input value={adminPassword} onChange={e => setAdminPassword(e.target.value)} type="password" placeholder="Enter Room Admin Password"/>
+          <div className="actions" style={{gap: '10px', marginTop: '15px'}}>
+            <button disabled={busy} onClick={createRoom} style={{backgroundColor: '#22c55e', color: 'white'}}>1. Create New Room</button>
+            <button disabled={busy} onClick={joinRoom}>2. Join as Auctioneer</button>
+          </div>
+        </>
+      ) : (
+        <>
+          <label>Room password</label>
           <input type="password" value={roomPassword} onChange={e => setRoomPassword(e.target.value)} placeholder="Enter Room Password"/>
           <label>Team PIN</label>
           <input type="password" value={teamPin} onChange={e => setTeamPin(e.target.value.replace(/\D/g, "").slice(0, 4))} inputMode="numeric" maxLength={4} placeholder="Enter 4-digit Team PIN"/>
@@ -289,7 +320,7 @@ export default function Home() {
     <section className="card"><h3>Teams & purse tracker</h3><div className="teams">{teams.map(t=><div className={`team ${t.id===profile.team_id?"active":""}`} key={t.id}><b>{t.name}</b><div className="teamMoney">{money(t.purse_remaining)}</div><div className="muted">{t.squad_count} players · {t.overseas_count} overseas</div></div>)}</div></section>
     <div className="grid"><section className="card"><h3>Player queue</h3><div className="tableWrap"><table><thead><tr><th>Player</th><th>Country</th><th>Role</th><th>Base</th><th>Status</th></tr></thead><tbody>{players.map(p=><tr key={p.id} className={p.id===room.current_player_id?"selected":""}><td>{p.name}</td><td>{p.country}</td><td>{p.role}</td><td>{money(p.base_price)}</td><td>{p.status}</td></tr>)}</tbody></table></div></section>
       <section className="card"><h3>Live bid history</h3>{history.length ? history.map((b:any)=><div className="history" key={b.id}><b>{b.teams?.name || "Team"}</b> bid {money(b.amount)}<div className="muted">{b.players?.name} · {new Date(b.created_at).toLocaleTimeString()}</div></div>) : <p className="muted">No accepted bids yet.</p>}<div className="actions"><button className="alt" onClick={exportCsv}>Export CSV</button></div></section></div>
-    {showSquad && <div className="modalBackdrop" role="presentation" onClick={() => setShowSquad(false)} style={{position:"fixed",inset:0,background:"rgba(0,0,0,.78)",zIndex:1000,display:"flex",alignItems:"center",justifyContent:"center",padding:16}}><section className="card" role="dialog" aria-modal="true" aria-label={isAdmin ? "All team squads" : "My squad"} onClick={e => e.stopPropagation()} style={{width:"min(760px,100%)",maxHeight:"85vh",overflowY:"auto"}}><div className="actions" style={{justifyContent:"space-between",alignItems:"center"}}><h2>{isAdmin ? "All Team Squads" : "My Squad"}</h2><button className="alt" onClick={() => setShowSquad(false)}>Close</button></div>{squadEntries.length ? <div className="tableWrap"><table><thead><tr>{isAdmin && <th>Team</th>}<th>Player</th><th>Role</th><th>Country</th><th>Purchase Price</th></tr></thead><tbody>{squadEntries.map(entry => <tr key={entry.id}>{isAdmin && <td>{entry.teams?.name || "Team"}</td>}<td>{entry.players?.name || "Player"}</td><td>{entry.players?.role || "—"}</td><td>{entry.players?.country || "—"}</td><td>{money(Number(entry.price))}</td></tr>)}</tbody></table></div> : <p className="muted">No players purchased yet.</p>}</section></div>}
+    {showSquad && <div className="modalBackdrop" role="presentation" onClick={() => setShowSquad(false)} style={{position:"fixed",inset:0,background:"rgba(0,0,0,.78)",zIndex:1000,display:"flex",alignItems:"center",justifyContent:"center",padding:16}}><section className="card" role="dialog" aria-modal="true" aria-label={isAdmin ? "All team squads" : "My squad"} onClick={e => e.stopPropagation()} style={{width:"min(760px,100%)",maxHeight:"85vh",overflowY:"auto"}}><div className="actions" style={{justifyContent:"space-between",alignItems:"center"}}><h2>{isAdmin ? "All Team Squads" : "My Squad"}</h2><button className="alt" onClick={() => setShowSquad(false)}>Close</button></div>{squadEntries.length ? <div className="tableWrap"><table><thead><tr>{isAdmin && <th>Team</th>}<th>Player</th><th>Role</th><th>Country</th><th>Purchase Price</th></tr></thead><tbody>{squadEntries.map(entry => <tr key={entry.id}>{isAdmin && <td>{entry.teams?.[0]?.name || "Team"}</td>}<td>{entry.players?.[0]?.name || "Player"}</td><td>{entry.players?.[0]?.role || "—"}</td><td>{entry.players?.[0]?.country || "—"}</td><td>{money(Number(entry.price))}</td></tr>)}</tbody></table></div> : <p className="muted">No players purchased yet.</p>}</section></div>}
     <footer>WCL AUCTION ROOM · Virtual credits only · Connection state is shown above</footer>
   </main>;
-}
+        }

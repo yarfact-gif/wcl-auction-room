@@ -74,9 +74,18 @@ export default function Home() {
     setCurrentPlayer(cp);
     
     const amount = Number(r.current_bid || 0);
-    const base = Number(cp?.base_price || 2);
-    setNextBid(Number((amount ? amount + (amount < 5 ? 0.2 : 0.5) : base).toFixed(1)));
-  }, [db]);
+const base = Number(cp?.base_price || 0.20);
+
+const increment = amount < 0.50
+  ? 0.05
+  : amount < 1.00
+    ? 0.10
+    : amount < 5.00
+      ? 0.20
+      : 0.50;
+
+setNextBid(Number((amount > 0 ? amount + increment : base).toFixed(2)));
+    }, [db]);
   
   useEffect(() => {
     db.auth.getSession().then(({ data }) => setSession(data.session));

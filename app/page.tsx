@@ -269,23 +269,46 @@ p_auction_category: newPlayer.category
       </select>
 
       {teamId === "" ? (
-        <>
-          <label>Admin/Room Password</label>
-          <input value={adminPassword} onChange={e => setAdminPassword(e.target.value)} type="password" placeholder="Enter Room Admin Password"/>
-          <div className="actions" style={{gap: '10px', marginTop: '15px'}}>
-            <button disabled={busy} onClick={createRoom} style={{backgroundColor: '#22c55e', color: 'white'}}>1. Create New Room</button>
-            <button disabled={busy} onClick={joinRoom}>2. Join as Auctioneer</button>
-          </div>
-        </>
-      ) : (
-        <>
-          <label>Room password</label>
-          <input value={roomPassword} onChange={e => setRoomPassword(e.target.value)} type="password" placeholder="Enter Room Password"/>
-          <label>Team PIN</label>
-          <input value={teamPin} onChange={e => setTeamPin(e.target.value.replace(/\D/g, "").slice(0, 4))} type="password" inputMode="numeric" maxLength={4} placeholder="4-digit team PIN"/>
-          <button disabled={busy} onClick={joinRoom} style={{marginTop: '15px'}}>Join Team Room</button>
-        </>
-      )}
+  <>
+    <label>Admin/Room Password</label>
+    <input
+      value={adminPassword}
+      onChange={e => setAdminPassword(e.target.value)}
+      type="password"
+      placeholder="Enter Room Admin Password"
+    />
+    <div className="actions" style={{gap: '10px', marginTop: '15px'}}>
+      <button disabled={busy} onClick={createRoom} style={{backgroundColor: '#22c55e', color: 'white'}}>
+        1. Create New Room
+      </button>
+      <button disabled={busy} onClick={joinRoom}>
+        2. Join as Auctioneer
+      </button>
+    </div>
+  </>
+) : (
+  <>
+    <label>Room password</label>
+    <input
+      type="password"
+      value={roomPassword}
+      onChange={e => setRoomPassword(e.target.value)}
+      placeholder="Enter Room Password"
+    />
+    <label>Team PIN</label>
+    <input
+      type="password"
+      value={teamPin}
+      onChange={e => setTeamPin(e.target.value.replace(/\D/g, "").slice(0, 4))}
+      inputMode="numeric"
+      maxLength={4}
+      placeholder="Enter 4-digit Team PIN"
+    />
+    <button disabled={busy} onClick={joinRoom} style={{marginTop: '15px'}}>
+      Join Team Room
+    </button>
+  </>
+)}
       {message && <p className="notice" style={{marginTop: '15px'}}>{message}</p>}
     </section>
   </main>;

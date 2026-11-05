@@ -7,7 +7,12 @@ type Team = { id: string; name: string; purse_remaining: number; squad_count: nu
 type Player = { id: string; name: string; country: string; player_type: string; role: string; batting_style: string; bowling_style: string; base_price: number; status: string; image_url?: string | null };
 type RoomState = { id: string; status: string; current_player_id: string | null; current_bid: number; leading_team_id: string | null; warning_stage: number; countdown_ends_at: string | null };
 type Profile = { role: string; team_id: string | null; display_name: string | null };
-type SquadEntry = { id: number; price: number; teams?: { name: string }[] | null; players?: { name: string; role: string; country: string }[] | null };
+type SquadEntry = {
+  id: number;
+  price: number;
+  teams?: { name: string }[] | { name: string } | null;
+  players?: { name: string; role: string; country: string }[] | { name: string; role: string; country: string } | null;
+};
 
 const money = (n: number) => `₹${Number(n || 0).toFixed(1)} Cr`;
 const TEAM_NAMES = [

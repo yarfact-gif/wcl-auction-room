@@ -45,7 +45,15 @@ export default function Home() {
   const [message, setMessage] = useState("");
   const [busy, setBusy] = useState(false);
   const [generatedCredentials, setGeneratedCredentials] = useState<{ roomCode: string; teams: { name: string; pin: string }[] } | null>(null);
-  const [newPlayer, setNewPlayer] = useState({ name: "", country: "India", role: "Batter", batting: "", bowling: "", base: "0.20" }); const [customBase, setCustomBase] = useState("");
+  const [newPlayer, setNewPlayer] = useState({
+  name: "",
+  country: "India",
+  role: "Batter",
+  category: "Marquee",
+  batting: "",
+  bowling: "",
+  base: "0.20"
+}); const [customBase, setCustomBase] = useState("");
       const refresh = useCallback(async () => {
     const { data: auth } = await db.auth.getSession();
     if (!auth.session) return;

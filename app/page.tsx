@@ -330,7 +330,27 @@ setNextBid(Number((amount > 0 ? amount + increment : base).toFixed(2)));
         <p className="muted">Squad minimum: 15 · maximum: 18 · overseas maximum: 8 · Playing XI overseas maximum: 4.</p>
       </section>
     </div>
-    {isAdmin && <section className="card"><h3>Player queue management</h3><div className="formGrid"><input placeholder="Player name" value={newPlayer.name} onChange={e => setNewPlayer({...newPlayer,name:e.target.value})}/><input placeholder="Country" value={newPlayer.country} onChange={e => setNewPlayer({...newPlayer,country:e.target.value})}/><select value={newPlayer.role} onChange={e => setNewPlayer({...newPlayer,role:e.target.value})}>{["Batter","Bowler","All-rounder","Wicketkeeper"].map(x=><option key={x}>{x}</option>)}</select><select value={newPlayer.country === "India" ? "Indian" : "Overseas"} onChange={e => setNewPlayer({...newPlayer,country:e.target.value === "Indian" ? "India" : "Overseas"})}><option>Indian</option><option>Overseas</option></select><input placeholder="Batting style" value={newPlayer.batting} onChange={e => setNewPlayer({...newPlayer,batting:e.target.value})}/><input placeholder="Bowling style" value={newPlayer.bowling} onChange={e => setNewPlayer({...newPlayer,bowling:e.target.value})}/><input type="number" min="2" step=".2" value={newPlayer.base} onChange={e => setNewPlayer({...newPlayer,base:e.target.value})}/><button disabled={busy || !newPlayer.name.trim()} onClick={addPlayer}>Add player</button></div><p className="muted">Full edit/reorder/import tools are listed in the setup roadmap; database permissions already restrict player mutations to the auctioneer.</p></section>}
+    {isAdmin && <section className="card"><h3>Player queue management</h3><div className="formGrid"><input placeholder="Player name" value={newPlayer.name} onChange={e => setNewPlayer({...newPlayer,name:e.target.value})}/><input placeholder="Country" value={newPlayer.country} onChange={e => setNewPlayer({...newPlayer,country:e.target.value})}/><select value={newPlayer.role} onChange={e => setNewPlayer({...newPlayer,role:e.target.value})}>{["Batter","Bowler","All-rounder","Wicketkeeper"].map(x=><option key={x}>{x}</option>)}</select><select value={newPlayer.country === "India" ? "Indian" : "Overseas"} onChange={e => setNewPlayer({...newPlayer,country:e.target.value === "Indian" ? "India" : "Overseas"})}><option>Indian</option><option>Overseas</option></select><input placeholder="Batting style" value={newPlayer.batting} onChange={e => setNewPlayer({...newPlayer,batting:e.target.value})}/><input placeholder="Bowling style" value={newPlayer.bowling} onChange={e => setNewPlayer({...newPlayer,bowling:e.target.value})}/><select
+  value={newPlayer.base}
+  onChange={e => setNewPlayer({...newPlayer, base:e.target.value})}
+>
+  <option value="0.20">₹20 Lakh</option>
+  <option value="0.50">₹50 Lakh</option>
+  <option value="1.00">₹1 Crore</option>
+  <option value="2.00">₹2 Crore</option>
+  <option value="custom">Custom Price</option>
+</select>
+
+{newPlayer.base === "custom" && (
+  <input
+    type="number"
+    min="0.20"
+    step="0.01"
+    placeholder="Custom price in Crores (e.g. 0.75)"
+    value={customBase}
+    onChange={e => setCustomBase(e.target.value)}
+  />
+)}<button disabled={busy || !newPlayer.name.trim()} onClick={addPlayer}>Add player</button></div><p className="muted">Full edit/reorder/import tools are listed in the setup roadmap; database permissions already restrict player mutations to the auctioneer.</p></section>}
     <section className="card"><h3>Teams & purse tracker</h3><div className="teams">{teams.map(t=><div className={`team ${t.id===profile.team_id?"active":""}`} key={t.id}><b>{t.name}</b><div className="teamMoney">{money(t.purse_remaining)}</div><div className="muted">{t.squad_count} players · {t.overseas_count} overseas</div></div>)}</div></section>
     <div className="grid"><section className="card"><h3>Player queue</h3><div className="tableWrap"><table><thead><tr><th>Player</th><th>Country</th><th>Role</th><th>Base</th><th>Status</th></tr></thead><tbody>{players.map(p=><tr key={p.id} className={p.id===room.current_player_id?"selected":""}><td>{p.name}</td><td>{p.country}</td><td>{p.role}</td><td>{money(p.base_price)}</td><td>{p.status}</td></tr>)}</tbody></table></div></section>
       <section className="card"><h3>Live bid history</h3>{history.length ? history.map((b:any)=><div className="history" key={b.id}><b>{b.teams?.name || "Team"}</b> bid {money(b.amount)}<div className="muted">{b.players?.name} · {new Date(b.created_at).toLocaleTimeString()}</div></div>) : <p className="muted">No accepted bids yet.</p>}<div className="actions"><button className="alt" onClick={exportCsv}>Export CSV</button></div></section></div>

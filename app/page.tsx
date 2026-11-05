@@ -251,8 +251,7 @@ p_auction_category: newPlayer.category
     if (error) { setMessage(error.message); return; }
     const rows = [["Team", "Player", "Role", "Country", "Price Cr"], ...(data || []).map((x: any) => [x.teams?.name, x.players?.name, x.players?.role, x.players?.country, x.price])];
     const csv = rows.map(r => r.map(v => `"${String(v ?? "").replaceAll('"', '""')}"`).join(",")).join("\n");
-    const a = document.createElement("a"); a.href = URL.createObjectURL(new Blob([csv], { type: "text/csv" })); a.download = "WCL-auction-results.csv"; a.click(); URL.revokeObjectURL(a.href);
-  }
+    const a = document.createElement("a"); a.href = URL.createObjectURL(new Blob([csv], { type: "text/csv" })); a.download = "WCL-auction-results.csv"; a.click(); URL.revokeObjectURL(a.href);}
      if (!session) return <main className="wrap">
     <header><div><div className="brand">WCL <b>AUCTION ROOM</b></div><div className="muted">SEASON 1 · PRIVATE MULTIPLAYER AUCTION</div></div><span className="pill">SETUP REQUIRED</span></header>
     <section className="card login">

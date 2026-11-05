@@ -50,9 +50,6 @@ export default function Home() {
     const { data: r } = await db.from("rooms").select("*").eq("id", membership.room_id).single();
     if (!r) return;
     setRoom(r);
-    const { data: r } = await db.from("rooms").select("*").eq("id", membership.room_id).single();
-    if (!r) return;
-    setRoom(r);
     
     const [{ data: ts }, { data: ps }, { data: bids }] = await Promise.all([
       db.from("team_public_state").select("*").eq("room_id", r.id).order("name"),
@@ -90,6 +87,7 @@ export default function Home() {
       .subscribe();
     return () => { db.removeChannel(channel); };
   }, [db, room?.id, refresh]);
+  
 
   useEffect(() => {
     const id = setInterval(() => setClock(Date.now()), 100);
@@ -138,7 +136,8 @@ export default function Home() {
       setMessage("Error creating room: " + (err.message || "Unknown error"));
     } finally { setBusy(false); }
   }
-async function joinRoom() {
+
+  async function joinRoom() {
     if (!session) { setMessage("Please sign in first."); return; }
     const suppliedRoomPassword = teamId === "" ? adminPassword : roomPassword;
     if (!roomCode.trim() || !suppliedRoomPassword) { setMessage("Enter the room code and room password."); return; }
@@ -187,7 +186,8 @@ async function joinRoom() {
     setBusy(false);
     if (error) setMessage(error.message);
     else { setNewPlayer({ name: "", country: "India", role: "Batter", batting: "", bowling: "", base: "2" }); setMessage("Player added."); refresh(); }
-      }
+  }
+
   async function exportCsv() {
     if (!room) return;
     const { data, error } = await db.from("squads").select("teams(name),players(name,role,country),price").eq("room_id", room.id);
@@ -196,7 +196,9 @@ async function joinRoom() {
     const csv = rows.map(r => r.map(v => `"${String(v ?? "").replaceAll('"', '""')}"`).join(",")).join("\n");
     const a = document.createElement("a"); a.href = URL.createObjectURL(new Blob([csv], { type: "text/csv" })); a.download = "WCL-auction-results.csv"; a.click(); URL.revokeObjectURL(a.href);
   }
-     if (!session) return <main className="wrap">
+  if (!session) {
+    return (
+      <main className="wrap">
     <header><div><div className="brand">WCL <b>AUCTION ROOM</b></div><div className="muted">SEASON 1 · PRIVATE MULTIPLAYER AUCTION</div></div><span className="pill">SETUP REQUIRED</span></header>
     <section className="card login">
       <h1>Enter the auction room</h1><p className="muted">Create an account or sign in first. Then build or enter your room credentials.</p>
@@ -222,6 +224,34 @@ async function joinRoom() {
         </>
       ) : (
         <>
+          <label>Room password</label>
+          <input value={roomPassword} onChange={e => setRoomPassword(e.target.value)} type="password" placeholder="Enter Room Password"/>
+          <label>Team PIN</label>
+          <input value={teamPin} onChange={e => setTeamPin(e.target.value.replace(/\D/g, "").slice(0, 4))} type="password" inputMode="numeric" maxLength={4} placeholder="4-digit team PIN"/>
+          <button disabled={busy} onClick={joinRoom} style={{marginTop: '15px'}}>Join Team Room</button>
+        </>
+      )}
+      {message && <p className="notice" style={{marginTop: '15px'}}>{message}</p>}
+    </section>
+      </main>
+    );
+  }
+
+  if (!room || !profile) {
+    return (
+      <main className="wrap">
+    <header><div className="brand">WCL <b>AUCTION ROOM</b></div><button className="alt" onClick={() => db.auth.signOut()}>Sign out</button></header>
+    <section className="card">
+      <h2>You're signed in</h2><p className="muted">Create or Join your room.</p>
+      <label>Room code</label><input value={roomCode} onChange={e => setRoomCode(e.target.value)} placeholder="WCLS1" />
+      <label>Team</label>
+      <select value={teamId} onChange={e => setTeamId(e.target.value)}>
+        <option value="">Auctioneer (Owner)</option>
+        {TEAM_NAMES.map(n => <option key={n} value={n}>{n}</option>)}
+      </select>
+
+      {teamId === "" ? (
+        <>
           <label>Admin/Room Password</label>
           <input value={adminPassword} onChange={e => setAdminPassword(e.target.value)} type="password" placeholder="Enter Room Admin Password"/>
           <div className="actions" style={{gap: '10px', marginTop: '15px'}}>
@@ -246,8 +276,12 @@ async function joinRoom() {
         <button type="button" className="alt" onClick={() => navigator.clipboard?.writeText(`Room: ${generatedCredentials.roomCode}\n` + generatedCredentials.teams.map(t => `${t.name}: ${t.pin}`).join("\n"))}>Copy all PINs</button>
       </div>}
     </section>
-  </main>;
-      return <main className="wrap">
+      </main>
+    );
+  }
+
+  return (
+      <main className="wrap">
     <header><div><div className="brand">WCL <b>AUCTION ROOM</b></div><div className="muted">SEASON 1 · 10 TEAMS · ₹150 CR PURSE</div></div><div className="headerRight"><span className="pill">{room.status.toUpperCase()}</span><span className="connected">● LIVE CONNECTION</span><button className="alt" onClick={() => db.auth.signOut()}>Sign out</button></div></header>
     {message && <div className="notice">{message}</div>}
     {room.warning_stage > 0 && <div className="warning">{room.warning_stage === 1 ? "⚠ WARNING" : room.warning_stage === 2 ? "⚠ FINAL WARNING" : "BIDDING CLOSED — AWAITING AUCTIONEER"}</div>}
@@ -265,11 +299,12 @@ async function joinRoom() {
         {myTeam ? <><div className="stats"><div className="stat"><div className="muted">PURSE REMAINING</div><b className="big">{money(myTeam.purse_remaining)}</b></div><div className="stat"><div className="muted">SQUAD SIZE</div><b className="big">{myTeam.squad_count}/18</b></div><div className="stat"><div className="muted">OVERSEAS</div><b>{myTeam.overseas_count}/8</b></div><div className="stat"><div className="muted">SPENT</div><b>{money(150 - myTeam.purse_remaining)}</b></div></div></> : <p className="muted">Auctioneer view · all teams visible below.</p>}
         <p className="muted">Squad minimum: 15 · maximum: 18 · overseas maximum: 8 · Playing XI overseas maximum: 4.</p>
       </section>
-       </div>
+    </div>
     {isAdmin && <section className="card"><h3>Player queue management</h3><div className="formGrid"><input placeholder="Player name" value={newPlayer.name} onChange={e => setNewPlayer({...newPlayer,name:e.target.value})}/><input placeholder="Country" value={newPlayer.country} onChange={e => setNewPlayer({...newPlayer,country:e.target.value})}/><select value={newPlayer.role} onChange={e => setNewPlayer({...newPlayer,role:e.target.value})}>{["Batter","Bowler","All-rounder","Wicketkeeper"].map(x=><option key={x}>{x}</option>)}</select><select value={newPlayer.country === "India" ? "Indian" : "Overseas"} onChange={e => setNewPlayer({...newPlayer,country:e.target.value === "Indian" ? "India" : "Overseas"})}><option>Indian</option><option>Overseas</option></select><input placeholder="Batting style" value={newPlayer.batting} onChange={e => setNewPlayer({...newPlayer,batting:e.target.value})}/><input placeholder="Bowling style" value={newPlayer.bowling} onChange={e => setNewPlayer({...newPlayer,bowling:e.target.value})}/><input type="number" min="2" step=".2" value={newPlayer.base} onChange={e => setNewPlayer({...newPlayer,base:e.target.value})}/><button disabled={busy || !newPlayer.name.trim()} onClick={addPlayer}>Add player</button></div><p className="muted">Full edit/reorder/import tools are listed in the setup roadmap; database permissions already restrict player mutations to the auctioneer.</p></section>}
     <section className="card"><h3>Teams & purse tracker</h3><div className="teams">{teams.map(t=><div className={`team ${t.id===profile.team_id?"active":""}`} key={t.id}><b>{t.name}</b><div className="teamMoney">{money(t.purse_remaining)}</div><div className="muted">{t.squad_count} players · {t.overseas_count} overseas</div></div>)}</div></section>
     <div className="grid"><section className="card"><h3>Player queue</h3><div className="tableWrap"><table><thead><tr><th>Player</th><th>Country</th><th>Role</th><th>Base</th><th>Status</th></tr></thead><tbody>{players.map(p=><tr key={p.id} className={p.id===room.current_player_id?"selected":""}><td>{p.name}</td><td>{p.country}</td><td>{p.role}</td><td>{money(p.base_price)}</td><td>{p.status}</td></tr>)}</tbody></table></div></section>
       <section className="card"><h3>Live bid history</h3>{history.length ? history.map((b:any)=><div className="history" key={b.id}><b>{b.teams?.name || "Team"}</b> bid {money(b.amount)}<div className="muted">{b.players?.name} · {new Date(b.created_at).toLocaleTimeString()}</div></div>) : <p className="muted">No accepted bids yet.</p>}<div className="actions"><button className="alt" onClick={exportCsv}>Export CSV</button></div></section></div>
     <footer>WCL AUCTION ROOM · Virtual credits only · Connection state is shown above</footer>
-  </main>;
+      </main>
+  );
 }

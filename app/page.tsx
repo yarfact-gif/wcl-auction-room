@@ -371,7 +371,10 @@ setNextBid(Number((amount > 0 ? amount + increment : base).toFixed(2)));
   !Number.isFinite(r.base_price) ||
   r.base_price < 0.20
 );
-    if (invalid >= 0) { setMessage(`Row ${invalid + 2} is invalid. Check name, country, role, category and base price (Cr).`); return; }
+     if (invalid >= 0) {
+  setMessage(`Row ${invalid + 2} is invalid. Check name, player type, country, role, category and base price (Cr).`);
+  return;
+     }
     if (!window.confirm(`Import exactly ${importRows.length} players from ${importFileName}?`)) return;
     setBusy(true);
     const { data, error } = await db.rpc("admin_import_players", { p_room_id: room.id, p_players: importRows });

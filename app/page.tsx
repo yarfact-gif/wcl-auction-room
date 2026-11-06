@@ -279,13 +279,27 @@ setNextBid(Number((amount > 0 ? amount + increment : base).toFixed(2)));
   }
 
   function beginEdit(player: Player) {
-    if (player.status === "sold" || player.status === "current") { setMessage("Only upcoming or unsold players can be edited."); return; }
-    setEditingPlayerId(player.id);
-    setNewPlayer({ name: player.name, country: player.country, role: player.role, category: player.auction_category || "Marquee", batting: player.batting_style || "", bowling: player.bowling_style || "", base: "custom" });
-    setCustomBase(String(player.base_price));
-    window.scrollTo({ top: 0, behavior: "smooth" });
+  if (player.status === "sold" || player.status === "current") {
+    setMessage("Only upcoming or unsold players can be edited.");
+    return;
   }
 
+  setEditingPlayerId(player.id);
+
+  setNewPlayer({
+    name: player.name,
+    country: player.country,
+    playerType: player.player_type,
+    role: player.role,
+    category: player.auction_category || "Marquee",
+    batting: player.batting_style || "",
+    bowling: player.bowling_style || "",
+    base: "custom"
+  });
+
+  setCustomBase(String(player.base_price));
+  window.scrollTo({ top: 0, behavior: "smooth" });
+  }
   async function requeueUnsold(player: Player) {
     if (!room || !window.confirm(`Return ${player.name} to the upcoming queue?`)) return;
     await act("admin_requeue_unsold", { p_room_id: room.id, p_player_id: player.id });

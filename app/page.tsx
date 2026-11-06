@@ -668,8 +668,56 @@ setNextBid(Number((amount > 0 ? amount + increment : base).toFixed(2)));
       <h3>Bulk player import</h3>
       <p className="muted">CSV, XLS or XLSX. Required columns: name, country, role, category, base_price (in Cr). Optional: batting_style, bowling_style. No players are invented automatically.</p>
       <input type="file" accept=".csv,.xls,.xlsx" onChange={e => readImportFile(e.target.files?.[0])} />
-      {importRows.length > 0 && <><p className="muted">Preview: {importFileName} · {importRows.length} rows</p><div className="tableWrap"><table><thead><tr><th>Name</th><th>Country</th><th>Role</th><th>Category</th><th>Base Cr</th></tr></thead><tbody>{importRows.slice(0,20).map((r,i)=><tr key={i}><td>{r.name || "Missing"}</td><td>{r.country || "Missing"}</td><td>{r.role || "Missing"}</td><td>{r.category || "Missing"}</td><td>{r.base_price || "Missing"}</td></tr>)}</tbody></table></div>{importRows.length>20 && <p className="muted">Showing first 20 of {importRows.length} rows.</p>}<div className="actions"><button disabled={busy} onClick={importPlayers}>Confirm import {importRows.length} players</button><button className="alt" onClick={()=>setImportRows([])}>Clear preview</button></div></>}
-    </section>}
+      {importRows.length > 0 && (
+  <>
+    <p className="muted">
+      Preview: {importFileName} · {importRows.length} rows
+    </p>
+
+    <div className="tableWrap">
+      <table>
+        <thead>
+          <tr>
+            <th>Name</th>
+            <th>Player Type</th>
+            <th>Country</th>
+            <th>Role</th>
+            <th>Category</th>
+            <th>Base Cr</th>
+          </tr>
+        </thead>
+
+        <tbody>
+          {importRows.slice(0, 20).map((r, i) => (
+            <tr key={i}>
+              <td>{r.name || "Missing"}</td>
+              <td>{r.player_type || "Missing"}</td>
+              <td>{r.country || "Missing"}</td>
+              <td>{r.role || "Missing"}</td>
+              <td>{r.category || "Missing"}</td>
+              <td>{r.base_price || "Missing"}</td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    </div>
+
+    {importRows.length > 20 && (
+      <p className="muted">
+        Showing first 20 of {importRows.length} rows.
+      </p>
+    )}
+
+    <div className="actions">
+      <button disabled={busy} onClick={importPlayers}>
+        Confirm import {importRows.length} players
+      </button>
+      <button className="alt" onClick={() => setImportRows([])}>
+        Clear preview
+      </button>
+    </div>
+  </>
+)}
     <section className="card"><h3>Teams & purse tracker</h3><div className="teams">{teams.map(t=><div className={`team ${t.id===profile.team_id?"active":""}`} key={t.id}><b>{t.name}</b><div className="teamMoney">{money(t.purse_remaining)}</div><div className="muted">{t.squad_count} players · {t.overseas_count} overseas</div></div>)}</div></section>
     <div className="grid">
   <section className="card">

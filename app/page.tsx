@@ -362,7 +362,15 @@ setNextBid(Number((amount > 0 ? amount + increment : base).toFixed(2)));
   }
   async function importPlayers() {
     if (!room || !importRows.length) return;
-    const invalid = importRows.findIndex(r => !r.name || !r.country || !r.role || !CATEGORIES.includes(r.category as typeof CATEGORIES[number]) || !Number.isFinite(r.base_price) || r.base_price < 0.20);
+     const invalid = importRows.findIndex(r =>
+  !r.name?.trim() ||
+  !r.country?.trim() ||
+  !["Indian", "Overseas"].includes(r.player_type) ||
+  !r.role?.trim() ||
+  !CATEGORIES.includes(r.category as typeof CATEGORIES[number]) ||
+  !Number.isFinite(r.base_price) ||
+  r.base_price < 0.20
+);
     if (invalid >= 0) { setMessage(`Row ${invalid + 2} is invalid. Check name, country, role, category and base price (Cr).`); return; }
     if (!window.confirm(`Import exactly ${importRows.length} players from ${importFileName}?`)) return;
     setBusy(true);

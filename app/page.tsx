@@ -534,7 +534,63 @@ setNextBid(Number((amount > 0 ? amount + increment : base).toFixed(2)));
     "Uncapped Fast Bowler",
     "Uncapped Spinner"
   ].map(x => <option key={x} value={x}>{x}</option>)}
-</select><select value={newPlayer.country === "India" ? "Indian" : "Overseas"} onChange={e => setNewPlayer({...newPlayer,country:e.target.value === "Indian" ? "India" : "Overseas"})}><option>Indian</option><option>Overseas</option></select><input placeholder="Batting style" value={newPlayer.batting} onChange={e => setNewPlayer({...newPlayer,batting:e.target.value})}/><input placeholder="Bowling style" value={newPlayer.bowling} onChange={e => setNewPlayer({...newPlayer,bowling:e.target.value})}/><select
+<select
+  value={newPlayer.playerType}
+  onChange={e => {
+    const playerType = e.target.value;
+    setNewPlayer({
+      ...newPlayer,
+      playerType,
+      country: playerType === "Indian" ? "India" : "Australia"
+    });
+  }}
+>
+  <option value="Indian">Indian</option>
+  <option value="Overseas">Overseas</option>
+</select>
+
+{newPlayer.playerType === "Overseas" && (
+  <>
+    <select
+      value={[
+        "Australia", "England", "South Africa", "New Zealand",
+        "West Indies", "Sri Lanka", "Bangladesh", "Afghanistan",
+        "Zimbabwe"
+      ].includes(newPlayer.country) ? newPlayer.country : "Other"}
+      onChange={e =>
+        setNewPlayer({
+          ...newPlayer,
+          country: e.target.value === "Other" ? "" : e.target.value
+        })
+      }
+    >
+      <option value="Australia">Australia</option>
+      <option value="England">England</option>
+      <option value="South Africa">South Africa</option>
+      <option value="New Zealand">New Zealand</option>
+      <option value="West Indies">West Indies</option>
+      <option value="Sri Lanka">Sri Lanka</option>
+      <option value="Bangladesh">Bangladesh</option>
+      <option value="Afghanistan">Afghanistan</option>
+      <option value="Zimbabwe">Zimbabwe</option>
+      <option value="Other">Other</option>
+    </select>
+
+    {![
+      "Australia", "England", "South Africa", "New Zealand",
+      "West Indies", "Sri Lanka", "Bangladesh", "Afghanistan",
+      "Zimbabwe"
+    ].includes(newPlayer.country) && (
+      <input
+        placeholder="Enter country name"
+        value={newPlayer.country}
+        onChange={e =>
+          setNewPlayer({...newPlayer, country: e.target.value})
+        }
+      />
+    )}
+  </>
+)}
   value={newPlayer.base}
   onChange={e => setNewPlayer({...newPlayer, base:e.target.value})}
 >

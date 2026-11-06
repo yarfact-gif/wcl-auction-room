@@ -368,22 +368,45 @@ p_auction_category: newPlayer.category
     <div className="grid">
       <section className="card playerCard">
         {isAdmin && <div className="stats">
-  <div className="stat">
-    <div className="muted">TOTAL PLAYERS</div>
-    <b className="big">{totalPlayers}</b>
-  </div>
-  <div className="stat">
-    <div className="muted">SOLD</div>
-    <b className="big">{soldPlayers}</b>
-  </div>
-  <div className="stat">
-    <div className="muted">UNSOLD</div>
-    <b className="big">{unsoldPlayers}</b>
-  </div>
-  <div className="stat">
-    <div className="muted">UPCOMING</div>
-    <b className="big">{upcomingPlayers}</b>
-  </div>
+  <div className="stat"
+  role="button"
+  tabIndex={0}
+  style={{ cursor: "pointer" }}
+  onClick={() => setPlayerFilter("all")}
+>
+  <div className="muted">TOTAL PLAYERS</div>
+  <b className="big">{totalPlayers}</b>
+</div>
+
+<div className="stat"
+  role="button"
+  tabIndex={0}
+  style={{ cursor: "pointer" }}
+  onClick={() => setPlayerFilter("sold")}
+>
+  <div className="muted">SOLD</div>
+  <b className="big">{soldPlayers}</b>
+</div>
+
+<div className="stat"
+  role="button"
+  tabIndex={0}
+  style={{ cursor: "pointer" }}
+  onClick={() => setPlayerFilter("unsold")}
+>
+  <div className="muted">UNSOLD</div>
+  <b className="big">{unsoldPlayers}</b>
+</div>
+
+<div className="stat"
+  role="button"
+  tabIndex={0}
+  style={{ cursor: "pointer" }}
+  onClick={() => setPlayerFilter("upcoming")}
+>
+  <div className="muted">UPCOMING</div>
+  <b className="big">{upcomingPlayers}</b>
+</div>
 </div>}
         <div className="muted">PLAYER ON THE BLOCK</div>
         {currentPlayer ? <><div className="playerLine">{currentPlayer.image_url ? <img src={currentPlayer.image_url} alt="" /> : <div className="avatar">🏏</div>}<div><h1>{currentPlayer.name}</h1><div className="muted">{currentPlayer.country} · {currentPlayer.player_type} · {currentPlayer.role}</div><div className="muted">{currentPlayer.batting_style || "Batting style n/a"} · {currentPlayer.bowling_style || "Bowling style n/a"}</div></div></div><div className="big">{money(room.current_bid || currentPlayer.base_price)}</div><div className="muted">{leader ? `LEADING: ${leader.name}` : "NO BIDS YET"} · NEXT BID {money(nextBid)}</div></> : <h2>No player selected</h2>}

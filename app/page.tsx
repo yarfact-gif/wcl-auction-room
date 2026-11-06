@@ -256,7 +256,16 @@ setNextBid(Number((amount > 0 ? amount + increment : base).toFixed(2)));
     const { error } = await db.rpc(rpcName, rpcArgs);
     setBusy(false);
     if (error) setMessage(error.message);
-    else { setNewPlayer({ name: "", country: "India", role: "Batter", category: "Marquee", batting: "", bowling: "", base: "0.20" }); setCustomBase(""); setEditingPlayerId(null); setMessage(editingPlayerId ? "Player updated." : "Player added."); refresh(); }
+    else { setNewPlayer({
+  name: "",
+  country: "India",
+  playerType: "Indian",
+  role: "Batter",
+  category: "Marquee",
+  batting: "",
+  bowling: "",
+  base: "0.20"
+}); setCustomBase(""); setEditingPlayerId(null); setMessage(editingPlayerId ? "Player updated." : "Player added."); refresh(); }
   }
 
   async function choosePlayer(playerId: string) {

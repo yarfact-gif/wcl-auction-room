@@ -464,7 +464,7 @@ p_auction_category: newPlayer.category
           </tr>
         </thead>
         <tbody>
-          {players.map(p => (
+          {filteredPlayers.map(p => (
             <tr
               key={p.id}
               className={p.id === room.current_player_id ? "selected" : ""}

@@ -312,24 +312,54 @@ setNextBid(Number((amount > 0 ? amount + increment : base).toFixed(2)));
   }
 
   async function readImportFile(file?: File) {
-    if (!file) return;
-    try {
-      const data = await file.arrayBuffer();
-      const workbook = XLSX.read(data, { type: "array" });
-      const sheet = workbook.Sheets[workbook.SheetNames[0]];
-      const raw = XLSX.utils.sheet_to_json<Record<string, any>>(sheet, { defval: "" });
-      const rows = raw.map((r) => {
-        const get = (...keys: string[]) => {
-          const key = Object.keys(r).find(k => keys.includes(k.trim().toLowerCase().replace(/[ _-]/g, "")));
-          return key ? r[key] : "";
-        };
-        return { name: String(get("name","playername" )).trim(), country: String(get("country","nationality")).trim(), role: String(get("role","playerrole")).trim(), category: String(get("category","auctioncategory")).trim(), batting_style: String(get("battingstyle","batting")).trim(), bowling_style: String(get("bowlingstyle","bowling")).trim(), base_price: Number(get("baseprice","basepricecr","price")) };
-      });
-      setImportRows(rows); setImportFileName(file.name);
-      setMessage(`Preview ready: ${rows.length} rows. Check all fields before importing.`);
-    } catch (e: any) { setMessage("Could not read file: " + (e?.message || "Invalid file")); }
-  }
+  if (!file) return;
 
+  try {
+    const data = await file.arrayBuffer();
+    const workbook = XLSX.read(data, { type: "array" });
+    const sheet = workbook.Sheets[workbook.SheetNames[0]];
+    const raw = XLSX.utils.sheet_to_json<Record<string, any>>(
+      sheet,
+      { defval: "" }
+    );
+
+    const rows = raw.map((r) => {
+      const get = (...keys: string[]) => {
+        const key = Object.keys(r).find(k =>
+          keys.includes(k.trim().toLowerCase().replace(/[ _-]/g, ""))
+        );
+        return key ? r[key] : "";
+      };
+
+      const country = String(get("country", "nationality")).trim();
+      const suppliedType = String(
+        get("playertype", "type")
+      ).trim().toLowerCase();
+
+      const playerType =
+        suppliedType === "indian" || suppliedType === "overseas"
+          ? suppliedType === "indian" ? "Indian" : "Overseas"
+          : country.toLowerCase() === "india" ? "Indian" : "Overseas";
+
+      return {
+        name: String(get("name", "playername")).trim(),
+        country,
+        player_type: playerType,
+        role: String(get("role", "playerrole")).trim(),
+        category: String(get("category", "auctioncategory")).trim(),
+        batting_style: String(get("battingstyle", "batting")).trim(),
+        bowling_style: String(get("bowlingstyle", "bowling")).trim(),
+        base_price: Number(get("baseprice", "basepricecr", "price"))
+      };
+    });
+
+    setImportRows(rows);
+    setImportFileName(file.name);
+    setMessage(`Preview ready: ${rows.length} rows. Check all fields before importing.`);
+  } catch (e: any) {
+    setMessage("Could not read file: " + (e?.message || "Invalid file"));
+  }
+  }
   async function importPlayers() {
     if (!room || !importRows.length) return;
     const invalid = importRows.findIndex(r => !r.name || !r.country || !r.role || !CATEGORIES.includes(r.category as typeof CATEGORIES[number]) || !Number.isFinite(r.base_price) || r.base_price < 0.20);

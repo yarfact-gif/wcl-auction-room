@@ -50,6 +50,7 @@ const currentPlayers = players.filter(p => p.status === "current").length;
 const filteredPlayers = playerFilter === "all"
   ? players
   : players.filter(p => p.status === playerFilter);  
+ const [playerFilter, setPlayerFilter] = useState("all");
   const [nextBid, setNextBid] = useState(2.2);
   const [clock, setClock] = useState(Date.now());
   const [message, setMessage] = useState("");

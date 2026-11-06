@@ -73,6 +73,7 @@ const filteredPlayers = playerFilter === "all"
   const [newPlayer, setNewPlayer] = useState({
   name: "",
   country: "India",
+  playerType: "Indian",  
   role: "Batter",
   category: "Marquee",
   batting: "",

@@ -581,112 +581,175 @@ setNextBid(Number((amount > 0 ? amount + increment : base).toFixed(2)));
         <p className="muted">Squad minimum: 15 · maximum: 18 · overseas maximum: 8 · Playing XI overseas maximum: 4.</p>
       </section>
     </div>
-    {isAdmin && <section className="card"><h3>Auction mode</h3><p className="muted">Random mode follows the approved category order and shuffles players within each category. Manual mode waits for your selection.</p><div className="actions"><button className={auctionMode === "random" ? "green" : "alt"} onClick={()=>changeAuctionMode("random")}>Random by category</button><button className={auctionMode === "manual" ? "green" : "alt"} onClick={()=>changeAuctionMode("manual")}>Manual selection</button></div></section>}{isAdmin && <section className="card"><h3>Player queue management</h3><div className="formGrid"><input placeholder="Player name" value={newPlayer.name} onChange={e => setNewPlayer({...newPlayer,name:e.target.value})}/><input placeholder="Country" value={newPlayer.country} onChange={e => setNewPlayer({...newPlayer,country:e.target.value})}/><select
-  value={newPlayer.role}
-  onChange={e => setNewPlayer({...newPlayer, role:e.target.value})}
->
-  <option value="Batter">Batter</option>
-  <option value="Bowler">Bowler</option>
-  <option value="All-rounder">All-rounder</option>
-  <option value="Wicketkeeper">Wicketkeeper</option>
-</select>
+    
+{isAdmin && <section className="card">
+  <h3>Auction mode</h3>
+  <p className="muted">
+    Random mode follows the approved category order and shuffles players within each category. Manual mode waits for your selection.
+  </p>
+  <div className="actions">
+    <button className={auctionMode === "random" ? "green" : "alt"} onClick={() => changeAuctionMode("random")}>
+      Random by category
+    </button>
+    <button className={auctionMode === "manual" ? "green" : "alt"} onClick={() => changeAuctionMode("manual")}>
+      Manual selection
+    </button>
+  </div>
+</section>}
 
-<select
-  
-  value={newPlayer.category}
-  onChange={e => setNewPlayer({...newPlayer, category:e.target.value})}
->
-  {[
-    "Marquee",
-    "Batsman",
-    "All-rounder",
-    "Wicketkeeper",
-    "Fast Bowler",
-    "Spinner",
-    "Uncapped Batsman",
-    "Uncapped All-rounder",
-    "Uncapped Wicketkeeper",
-    "Uncapped Fast Bowler",
-    "Uncapped Spinner"
-  ].map(x => <option key={x} value={x}>{x}</option>)}
-<select
-  value={newPlayer.playerType}
-  onChange={e => {
-    const playerType = e.target.value;
-    setNewPlayer({
-      ...newPlayer,
-      playerType,
-      country: playerType === "Indian" ? "India" : "Australia"
-    });
-  }}
->
-  <option value="Indian">Indian</option>
-  <option value="Overseas">Overseas</option>
-</select>
+{isAdmin && <section className="card">
+  <h3>Player queue management</h3>
+  <div className="formGrid">
 
-{newPlayer.playerType === "Overseas" && (
-  <>
+    <input
+      placeholder="Player name"
+      value={newPlayer.name}
+      onChange={e => setNewPlayer({...newPlayer, name: e.target.value})}
+    />
+
     <select
-      value={[
-        "Australia", "England", "South Africa", "New Zealand",
-        "West Indies", "Sri Lanka", "Bangladesh", "Afghanistan",
-        "Zimbabwe"
-      ].includes(newPlayer.country) ? newPlayer.country : "Other"}
-      onChange={e =>
-        setNewPlayer({
-          ...newPlayer,
-          country: e.target.value === "Other" ? "" : e.target.value
-        })
-      }
+      value={newPlayer.role}
+      onChange={e => setNewPlayer({...newPlayer, role: e.target.value})}
     >
-      <option value="Australia">Australia</option>
-      <option value="England">England</option>
-      <option value="South Africa">South Africa</option>
-      <option value="New Zealand">New Zealand</option>
-      <option value="West Indies">West Indies</option>
-      <option value="Sri Lanka">Sri Lanka</option>
-      <option value="Bangladesh">Bangladesh</option>
-      <option value="Afghanistan">Afghanistan</option>
-      <option value="Zimbabwe">Zimbabwe</option>
-      <option value="Other">Other</option>
+      <option value="Batter">Batter</option>
+      <option value="Bowler">Bowler</option>
+      <option value="All-rounder">All-rounder</option>
+      <option value="Wicketkeeper">Wicketkeeper</option>
     </select>
 
-    {![
-      "Australia", "England", "South Africa", "New Zealand",
-      "West Indies", "Sri Lanka", "Bangladesh", "Afghanistan",
-      "Zimbabwe"
-    ].includes(newPlayer.country) && (
+    <select
+      value={newPlayer.category}
+      onChange={e => setNewPlayer({...newPlayer, category: e.target.value})}
+    >
+      {[
+        "Marquee",
+        "Batsman",
+        "All-rounder",
+        "Wicketkeeper",
+        "Fast Bowler",
+        "Spinner",
+        "Uncapped Batsman",
+        "Uncapped All-rounder",
+        "Uncapped Wicketkeeper",
+        "Uncapped Fast Bowler",
+        "Uncapped Spinner"
+      ].map(x => <option key={x} value={x}>{x}</option>)}
+    </select>
+
+    <select
+      value={newPlayer.playerType}
+      onChange={e => {
+        const playerType = e.target.value;
+        setNewPlayer({
+          ...newPlayer,
+          playerType,
+          country: playerType === "Indian" ? "India" : "Australia"
+        });
+      }}
+    >
+      <option value="Indian">Indian</option>
+      <option value="Overseas">Overseas</option>
+    </select>
+
+    {newPlayer.playerType === "Overseas" && (
+      <>
+        <select
+          value={[
+            "Australia", "England", "South Africa", "New Zealand",
+            "West Indies", "Sri Lanka", "Bangladesh", "Afghanistan",
+            "Zimbabwe"
+          ].includes(newPlayer.country) ? newPlayer.country : "Other"}
+          onChange={e => setNewPlayer({
+            ...newPlayer,
+            country: e.target.value === "Other" ? "" : e.target.value
+          })}
+        >
+          <option value="Australia">Australia</option>
+          <option value="England">England</option>
+          <option value="South Africa">South Africa</option>
+          <option value="New Zealand">New Zealand</option>
+          <option value="West Indies">West Indies</option>
+          <option value="Sri Lanka">Sri Lanka</option>
+          <option value="Bangladesh">Bangladesh</option>
+          <option value="Afghanistan">Afghanistan</option>
+          <option value="Zimbabwe">Zimbabwe</option>
+          <option value="Other">Other</option>
+        </select>
+
+        {![
+          "Australia", "England", "South Africa", "New Zealand",
+          "West Indies", "Sri Lanka", "Bangladesh", "Afghanistan",
+          "Zimbabwe"
+        ].includes(newPlayer.country) && (
+          <input
+            placeholder="Enter country name"
+            value={newPlayer.country}
+            onChange={e => setNewPlayer({
+              ...newPlayer,
+              country: e.target.value
+            })}
+          />
+        )}
+      </>
+    )}
+
+    <select
+      value={newPlayer.base}
+      onChange={e => setNewPlayer({...newPlayer, base: e.target.value})}
+    >
+      <option value="0.20">₹20 Lakh</option>
+      <option value="0.50">₹50 Lakh</option>
+      <option value="1.00">₹1 Crore</option>
+      <option value="2.00">₹2 Crore</option>
+      <option value="custom">Custom Price</option>
+    </select>
+
+    {newPlayer.base === "custom" && (
       <input
-        placeholder="Enter country name"
-        value={newPlayer.country}
-        onChange={e =>
-          setNewPlayer({...newPlayer, country: e.target.value})
-        }
+        type="number"
+        min="0.20"
+        step="0.01"
+        placeholder="Custom price in Crores (e.g. 0.75)"
+        value={customBase}
+        onChange={e => setCustomBase(e.target.value)}
       />
     )}
-  </>
-)}
-  value={newPlayer.base}
-  onChange={e => setNewPlayer({...newPlayer, base:e.target.value})}
->
-  <option value="0.20">₹20 Lakh</option>
-  <option value="0.50">₹50 Lakh</option>
-  <option value="1.00">₹1 Crore</option>
-  <option value="2.00">₹2 Crore</option>
-  <option value="custom">Custom Price</option>
-</select>
 
-{newPlayer.base === "custom" && (
-  <input
-    type="number"
-    min="0.20"
-    step="0.01"
-    placeholder="Custom price in Crores (e.g. 0.75)"
-    value={customBase}
-    onChange={e => setCustomBase(e.target.value)}
-  />
-)}<button disabled={busy || !newPlayer.name.trim()} onClick={addPlayer}>{editingPlayerId ? "Save player changes" : "Add player"}</button>{editingPlayerId && <button type="button" className="alt" onClick={() => { setEditingPlayerId(null); setNewPlayer({name:"",country:"India",role:"Batter",category:"Marquee",batting:"",bowling:"",base:"0.20"}); setCustomBase(""); }}>Cancel edit</button>}</div><div className="divider" />
-      <h3>Bulk player import</h3>
+    <button
+      disabled={busy || !newPlayer.name.trim()}
+      onClick={addPlayer}
+    >
+      {editingPlayerId ? "Save player changes" : "Add player"}
+    </button>
+
+    {editingPlayerId && (
+      <button
+        type="button"
+        className="alt"
+        onClick={() => {
+          setEditingPlayerId(null);
+          setNewPlayer({
+            name: "",
+            country: "India",
+            playerType: "Indian",
+            role: "Batter",
+            category: "Marquee",
+            batting: "",
+            bowling: "",
+            base: "0.20"
+          });
+          setCustomBase("");
+        }}
+      >
+        Cancel edit
+      </button>
+    )}
+
+  </div>
+  <div className="divider" />
+</section>}
+            
+   <h3>Bulk player import</h3>
       <p className="muted">CSV, XLS or XLSX. Required columns: name, country, role, category, base_price (in Cr). Optional: batting_style, bowling_style. No players are invented automatically.</p>
       <input type="file" accept=".csv,.xls,.xlsx" onChange={e => readImportFile(e.target.files?.[0])} />
       {importRows.length > 0 && (

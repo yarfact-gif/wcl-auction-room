@@ -41,7 +41,7 @@ export default function Home() {
   const [squadEntries, setSquadEntries] = useState<SquadEntry[]>([]);
   const [showSquad, setShowSquad] = useState(false);
   const [squadLoading, setSquadLoading] = useState(false);
-  const [currentPlayer, setCurrentPlayer] = useState<Player | null>(null); 
+  const [currentPlayer, setCurrentPlayer] = useState("all");
 const totalPlayers = players.length;
 const soldPlayers = players.filter(p => p.status === "sold").length;
 const unsoldPlayers = players.filter(p => p.status === "unsold").length;

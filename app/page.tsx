@@ -24,8 +24,14 @@ const CATEGORIES = [
   "Uncapped Fast Bowler", "Uncapped Spinner"
 ] as const;
 type ImportPlayer = {
-  name: string; country: string; role: string; category: string;
-  batting_style: string; bowling_style: string; base_price: number;
+  name: string;
+  country: string;
+  player_type: string;
+  role: string;
+  category: string;
+  batting_style: string;
+  bowling_style: string;
+  base_price: number;
 };
 const TEAM_NAMES = [
   "Trinbago Knight Riders", "Chennai Super Kings", "Mumbai Indians",

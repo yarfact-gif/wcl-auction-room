@@ -2,12 +2,13 @@
 
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { supabaseBrowser } from "@/lib/supabase";
+import * as XLSX from "xlsx";
 
 type Team = { id: string; name: string; purse_remaining: number; squad_count: number; overseas_count: number };
 type Player = { id: string; name: string; country: string; player_type: string; role: string; batting_style: string; bowling_style: string; base_price: number; status: string; image_url?: string | null;
   auction_category?: string | null;
 }; 
-type RoomState = { id: string; status: string; current_player_id: string | null; current_bid: number; leading_team_id: string | null; warning_stage: number; countdown_ends_at: string | null };
+type RoomState = { id: string; auction_mode?: string; status: string; current_player_id: string | null; current_bid: number; leading_team_id: string | null; warning_stage: number; countdown_ends_at: string | null };
 type Profile = { role: string; team_id: string | null; display_name: string | null };
 type SquadEntry = {
   id: number;
@@ -17,6 +18,15 @@ type SquadEntry = {
 };
 
 const money = (n: number) => `₹${Number(n || 0).toFixed(2)} Cr`;
+const CATEGORIES = [
+  "Marquee", "Batsman", "All-rounder", "Wicketkeeper", "Fast Bowler", "Spinner",
+  "Uncapped Batsman", "Uncapped All-rounder", "Uncapped Wicketkeeper",
+  "Uncapped Fast Bowler", "Uncapped Spinner"
+] as const;
+type ImportPlayer = {
+  name: string; country: string; role: string; category: string;
+  batting_style: string; bowling_style: string; base_price: number;
+};
 const TEAM_NAMES = [
   "Trinbago Knight Riders", "Chennai Super Kings", "Mumbai Indians",
   "Kolkata Knight Riders", "Royal Challengers Bengaluru", "Rajasthan Royals",
@@ -41,7 +51,11 @@ export default function Home() {
   const [squadEntries, setSquadEntries] = useState<SquadEntry[]>([]);
   const [showSquad, setShowSquad] = useState(false);
   const [squadLoading, setSquadLoading] = useState(false);
-  const [currentPlayer, setCurrentPlayer] = useState<Player | null>(null)
+  const [currentPlayer, setCurrentPlayer] = useState<Player | null>(null);
+  const [auctionMode, setAuctionMode] = useState("random");
+  const [editingPlayerId, setEditingPlayerId] = useState<string | null>(null);
+  const [importRows, setImportRows] = useState<ImportPlayer[]>([]);
+  const [importFileName, setImportFileName] = useState("");
 const [playerFilter, setPlayerFilter] = useState("all"); 
   const totalPlayers = players.length;
 const soldPlayers = players.filter(p => p.status === "sold").length;
@@ -78,8 +92,8 @@ const filteredPlayers = playerFilter === "all"
     const { data: r } = await db.from("rooms").select("*").eq("id", membership.room_id).single();
     if (!r) return;
     setRoom(r);
-    
-    const [{ data: ts }, { data: ps }, { data: bids }] = await Promise.all([
+    setAuctionMode(r.auction_mode || "random");
+      const [{ data: ts }, { data: ps }, { data: bids }] = await Promise.all([
       db.from("team_public_state").select("*").eq("room_id", r.id).order("name"),
       db.from("players").select("*").eq("room_id", r.id).order("queue_position"),
       db.from("bids").select("id,amount,created_at,teams(name),players(name)").eq("room_id", r.id).order("created_at", { ascending: false }).limit(30)
@@ -173,8 +187,7 @@ setNextBid(Number((amount > 0 ? amount + increment : base).toFixed(2)));
       setMessage("Error creating room: " + (err.message || "Unknown error"));
     } finally { setBusy(false); }
   }
-
-  async function joinRoom() {
+    async function joinRoom() {
     if (!session) { setMessage("Please sign in first."); return; }
     const suppliedRoomPassword = teamId === "" ? adminPassword : roomPassword;
     if (!roomCode.trim() || !suppliedRoomPassword) { setMessage("Enter the room code and room password."); return; }
@@ -222,16 +235,86 @@ setNextBid(Number((amount > 0 ? amount + increment : base).toFixed(2)));
       return;
     }
     setBusy(true);
-    const { error } = await db.rpc("admin_add_player", {
+    const rpcName = editingPlayerId ? "admin_edit_player" : "admin_add_player";
+    const rpcArgs = editingPlayerId ? {
+      p_room_id: room.id, p_player_id: editingPlayerId, p_name: newPlayer.name,
+      p_country: newPlayer.country, p_role: newPlayer.role,
+      p_batting_style: newPlayer.batting, p_bowling_style: newPlayer.bowling,
+      p_base_price: selectedBase, p_auction_category: newPlayer.category
+    } : {
       p_room_id: room.id, p_name: newPlayer.name, p_country: newPlayer.country,
       p_role: newPlayer.role, p_batting_style: newPlayer.batting,
-      p_bowling_style: newPlayer.bowling,
-p_base_price: selectedBase,
-p_auction_category: newPlayer.category
-    });
+      p_bowling_style: newPlayer.bowling, p_base_price: selectedBase,
+      p_auction_category: newPlayer.category
+    };
+    const { error } = await db.rpc(rpcName, rpcArgs);
     setBusy(false);
     if (error) setMessage(error.message);
-    else { setNewPlayer({ name: "", country: "India", role: "Batter", category: "Marquee", batting: "", bowling: "", base: "0.20" }); setCustomBase(""); setMessage("Player added."); refresh(); }
+    else { setNewPlayer({ name: "", country: "India", role: "Batter", category: "Marquee", batting: "", bowling: "", base: "0.20" }); setCustomBase(""); setEditingPlayerId(null); setMessage(editingPlayerId ? "Player updated." : "Player added."); refresh(); }
+  }
+
+  async function choosePlayer(playerId: string) {
+    if (!room) return;
+    await act("admin_select_player", { p_room_id: room.id, p_player_id: playerId });
+  }
+
+  async function removePlayer(player: Player) {
+    if (!room) return;
+    const confirmText = player.status === "current"
+      ? `Remove current player ${player.name}? Current bidding will be cleared.`
+      : `Remove ${player.name} from the queue?`;
+    if (!window.confirm(confirmText)) return;
+    await act("admin_remove_player", { p_room_id: room.id, p_player_id: player.id, p_confirm_current: player.status === "current" });
+  }
+
+  function beginEdit(player: Player) {
+    if (player.status === "sold" || player.status === "current") { setMessage("Only upcoming or unsold players can be edited."); return; }
+    setEditingPlayerId(player.id);
+    setNewPlayer({ name: player.name, country: player.country, role: player.role, category: player.auction_category || "Marquee", batting: player.batting_style || "", bowling: player.bowling_style || "", base: "custom" });
+    setCustomBase(String(player.base_price));
+    window.scrollTo({ top: 0, behavior: "smooth" });
+  }
+
+  async function requeueUnsold(player: Player) {
+    if (!room || !window.confirm(`Return ${player.name} to the upcoming queue?`)) return;
+    await act("admin_requeue_unsold", { p_room_id: room.id, p_player_id: player.id });
+  }
+
+  async function changeAuctionMode(mode: string) {
+    if (!room) return;
+    await act("admin_set_auction_mode", { p_room_id: room.id, p_mode: mode });
+    setAuctionMode(mode);
+  }
+
+  async function readImportFile(file?: File) {
+    if (!file) return;
+    try {
+      const data = await file.arrayBuffer();
+      const workbook = XLSX.read(data, { type: "array" });
+      const sheet = workbook.Sheets[workbook.SheetNames[0]];
+      const raw = XLSX.utils.sheet_to_json<Record<string, any>>(sheet, { defval: "" });
+      const rows = raw.map((r) => {
+        const get = (...keys: string[]) => {
+          const key = Object.keys(r).find(k => keys.includes(k.trim().toLowerCase().replace(/[ _-]/g, "")));
+          return key ? r[key] : "";
+        };
+        return { name: String(get("name","playername" )).trim(), country: String(get("country","nationality")).trim(), role: String(get("role","playerrole")).trim(), category: String(get("category","auctioncategory")).trim(), batting_style: String(get("battingstyle","batting")).trim(), bowling_style: String(get("bowlingstyle","bowling")).trim(), base_price: Number(get("baseprice","basepricecr","price")) };
+      });
+      setImportRows(rows); setImportFileName(file.name);
+      setMessage(`Preview ready: ${rows.length} rows. Check all fields before importing.`);
+    } catch (e: any) { setMessage("Could not read file: " + (e?.message || "Invalid file")); }
+  }
+
+  async function importPlayers() {
+    if (!room || !importRows.length) return;
+    const invalid = importRows.findIndex(r => !r.name || !r.country || !r.role || !CATEGORIES.includes(r.category as typeof CATEGORIES[number]) || !Number.isFinite(r.base_price) || r.base_price < 0.20);
+    if (invalid >= 0) { setMessage(`Row ${invalid + 2} is invalid. Check name, country, role, category and base price (Cr).`); return; }
+    if (!window.confirm(`Import exactly ${importRows.length} players from ${importFileName}?`)) return;
+    setBusy(true);
+    const { data, error } = await db.rpc("admin_import_players", { p_room_id: room.id, p_players: importRows });
+    setBusy(false);
+    if (error) setMessage("Import failed: " + error.message);
+    else { setMessage(`${data} players imported.`); setImportRows([]); setImportFileName(""); await refresh(); }
   }
 
   async function openSquad() {
@@ -422,7 +505,7 @@ p_auction_category: newPlayer.category
         <p className="muted">Squad minimum: 15 · maximum: 18 · overseas maximum: 8 · Playing XI overseas maximum: 4.</p>
       </section>
     </div>
-    {isAdmin && <section className="card"><h3>Player queue management</h3><div className="formGrid"><input placeholder="Player name" value={newPlayer.name} onChange={e => setNewPlayer({...newPlayer,name:e.target.value})}/><input placeholder="Country" value={newPlayer.country} onChange={e => setNewPlayer({...newPlayer,country:e.target.value})}/><select
+    {isAdmin && <section className="card"><h3>Auction mode</h3><p className="muted">Random mode follows the approved category order and shuffles players within each category. Manual mode waits for your selection.</p><div className="actions"><button className={auctionMode === "random" ? "green" : "alt"} onClick={()=>changeAuctionMode("random")}>Random by category</button><button className={auctionMode === "manual" ? "green" : "alt"} onClick={()=>changeAuctionMode("manual")}>Manual selection</button></div></section>}{isAdmin && <section className="card"><h3>Player queue management</h3><div className="formGrid"><input placeholder="Player name" value={newPlayer.name} onChange={e => setNewPlayer({...newPlayer,name:e.target.value})}/><input placeholder="Country" value={newPlayer.country} onChange={e => setNewPlayer({...newPlayer,country:e.target.value})}/><select
   value={newPlayer.role}
   onChange={e => setNewPlayer({...newPlayer, role:e.target.value})}
 >
@@ -470,7 +553,12 @@ p_auction_category: newPlayer.category
     value={customBase}
     onChange={e => setCustomBase(e.target.value)}
   />
-)}<button disabled={busy || !newPlayer.name.trim()} onClick={addPlayer}>Add player</button></div><p className="muted">Full edit/reorder/import tools are listed in the setup roadmap; database permissions already restrict player mutations to the auctioneer.</p></section>}
+)}<button disabled={busy || !newPlayer.name.trim()} onClick={addPlayer}>{editingPlayerId ? "Save player changes" : "Add player"}</button>{editingPlayerId && <button type="button" className="alt" onClick={() => { setEditingPlayerId(null); setNewPlayer({name:"",country:"India",role:"Batter",category:"Marquee",batting:"",bowling:"",base:"0.20"}); setCustomBase(""); }}>Cancel edit</button>}</div><div className="divider" />
+      <h3>Bulk player import</h3>
+      <p className="muted">CSV, XLS or XLSX. Required columns: name, country, role, category, base_price (in Cr). Optional: batting_style, bowling_style. No players are invented automatically.</p>
+      <input type="file" accept=".csv,.xls,.xlsx" onChange={e => readImportFile(e.target.files?.[0])} />
+      {importRows.length > 0 && <><p className="muted">Preview: {importFileName} · {importRows.length} rows</p><div className="tableWrap"><table><thead><tr><th>Name</th><th>Country</th><th>Role</th><th>Category</th><th>Base Cr</th></tr></thead><tbody>{importRows.slice(0,20).map((r,i)=><tr key={i}><td>{r.name || "Missing"}</td><td>{r.country || "Missing"}</td><td>{r.role || "Missing"}</td><td>{r.category || "Missing"}</td><td>{r.base_price || "Missing"}</td></tr>)}</tbody></table></div>{importRows.length>20 && <p className="muted">Showing first 20 of {importRows.length} rows.</p>}<div className="actions"><button disabled={busy} onClick={importPlayers}>Confirm import {importRows.length} players</button><button className="alt" onClick={()=>setImportRows([])}>Clear preview</button></div></>}
+    </section>}
     <section className="card"><h3>Teams & purse tracker</h3><div className="teams">{teams.map(t=><div className={`team ${t.id===profile.team_id?"active":""}`} key={t.id}><b>{t.name}</b><div className="teamMoney">{money(t.purse_remaining)}</div><div className="muted">{t.squad_count} players · {t.overseas_count} overseas</div></div>)}</div></section>
     <div className="grid">
   <section className="card">
@@ -485,6 +573,7 @@ p_auction_category: newPlayer.category
             <th>Category</th>
             <th>Base</th>
             <th>Status</th>
+            {isAdmin && <th>Admin actions</th>}
           </tr>
         </thead>
         <tbody>
@@ -499,14 +588,21 @@ p_auction_category: newPlayer.category
               <td>{p.auction_category || "Not set"}</td>
               <td>{money(p.base_price)}</td>
               <td>{p.status}</td>
+              {isAdmin && <td><div className="actions">
+                {p.status === "upcoming" && <button className="alt" onClick={()=>choosePlayer(p.id)} disabled={busy || room.status !== "live" || !!room.current_player_id}>Select</button>}
+                {(p.status === "upcoming" || p.status === "unsold") && <button className="alt" onClick={()=>beginEdit(p)}>Edit</button>}
+                {p.status === "unsold" && <button className="green" onClick={()=>requeueUnsold(p)}>Requeue</button>}
+                {p.status !== "sold" && <button className="red" onClick={()=>removePlayer(p)}>Remove</button>}
+              </div></td>}
             </tr>
           ))}
         </tbody>
       </table>
     </div>
   </section>  
+  </section>  
       <section className="card"><h3>Live bid history</h3>{history.length ? history.map((b:any)=><div className="history" key={b.id}><b>{b.teams?.name || "Team"}</b> bid {money(b.amount)}<div className="muted">{b.players?.name} · {new Date(b.created_at).toLocaleTimeString()}</div></div>) : <p className="muted">No accepted bids yet.</p>}<div className="actions"><button className="alt" onClick={exportCsv}>Export CSV</button></div></section></div>
     {showSquad && <div className="modalBackdrop" role="presentation" onClick={() => setShowSquad(false)} style={{position:"fixed",inset:0,background:"rgba(0,0,0,.78)",zIndex:1000,display:"flex",alignItems:"center",justifyContent:"center",padding:16}}><section className="card" role="dialog" aria-modal="true" aria-label={isAdmin ? "All team squads" : "My squad"} onClick={e => e.stopPropagation()} style={{width:"min(760px,100%)",maxHeight:"85vh",overflowY:"auto"}}><div className="actions" style={{justifyContent:"space-between",alignItems:"center"}}><h2>{isAdmin ? "All Team Squads" : "My Squad"}</h2><button className="alt" onClick={() => setShowSquad(false)}>Close</button></div>{squadEntries.length ? <div className="tableWrap"><table><thead><tr>{isAdmin && <th>Team</th>}<th>Player</th><th>Role</th><th>Country</th><th>Purchase Price</th></tr></thead><tbody>{squadEntries.map(entry => <tr key={entry.id}>{isAdmin && <td>{(Array.isArray(entry.teams) ? entry.teams?.[0]?.name : entry.teams?.name) || "Team"}</td>}<td>{(Array.isArray(entry.players) ? entry.players[0]?.name : entry.players?.name) || "Player"}</td><td>{(Array.isArray(entry.players) ? entry.players[0]?.role : entry.players?.role) || "—"}</td><td>{(Array.isArray(entry.players) ? entry.players[0]?.country : entry.players?.country) || "—"}</td><td>{money(Number(entry.price))}</td></tr>)}</tbody></table></div> : <p className="muted">No players purchased yet.</p>}</section></div>}
     <footer>WCL AUCTION ROOM · Virtual credits only · Connection state is shown above</footer>
   </main>;
-        }
+}
